@@ -160,7 +160,6 @@ const PreconfigPage: React.FC = () => {
         </div>
       )}
       </div>
-    </div>
   );
 };
 
