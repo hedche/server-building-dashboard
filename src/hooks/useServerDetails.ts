@@ -51,6 +51,7 @@ export const useServerDetails = () => {
   const fetchServerDetails = async (hostname: string) => {
     if (DEV_MODE) {
       setIsLoading(true);
+      setError(null);
       // Simulate API delay
       setTimeout(() => {
         setServerDetails({
@@ -58,6 +59,7 @@ export const useServerDetails = () => {
           hostname,
         });
         setIsLoading(false);
+        setError(null);
       }, 1000);
       return;
     }
@@ -66,7 +68,7 @@ export const useServerDetails = () => {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch(`${BACKEND_URL}/api/server-details`, {
+      const response = await fetch(`${BACKEND_URL}/api/server-details?hostname=${encodeURIComponent(hostname)}`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -81,6 +83,7 @@ export const useServerDetails = () => {
       setServerDetails(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch server details');
+      setServerDetails(null);
     } finally {
       setIsLoading(false);
     }
