@@ -48,7 +48,7 @@ export const useServerDetails = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchServerDetails = async (hostname: string) => {
+  const fetchServerDetails = React.useCallback(async (hostname: string) => {
     if (DEV_MODE) {
       setIsLoading(true);
       setError(null);
@@ -59,7 +59,6 @@ export const useServerDetails = () => {
           hostname,
         });
         setIsLoading(false);
-        setError(null);
       }, 1000);
       return;
     }
@@ -87,7 +86,7 @@ export const useServerDetails = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const clearServerDetails = () => {
     setServerDetails(null);

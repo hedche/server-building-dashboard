@@ -17,6 +17,21 @@ const ServerModal: React.FC<ServerModalProps> = ({ hostname, isOpen, onClose }) 
     }
   }, [isOpen, hostname, fetchServerDetails]);
 
+  // Handle click outside to close
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (isOpen && target.closest('.modal-content') === null) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const formatDateTime = (dateString?: string) => {
@@ -45,7 +60,7 @@ const ServerModal: React.FC<ServerModalProps> = ({ hostname, isOpen, onClose }) 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg border border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="modal-content bg-gray-800 rounded-lg border border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <div className="flex items-center space-x-2">
             <Server size={20} className="text-green-400" />
