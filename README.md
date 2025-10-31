@@ -33,15 +33,30 @@ npm run dev
 
 ### Environment Variables
 
-Create a `.env` file in the root directory:
+Copy the example environment file and modify as needed:
+
+```bash
+cp .env.example .env
+```
+
+Then edit the `.env` file with your configuration:
 
 ```env
+# Application Configuration
+VITE_APP_NAME=SAML Portal
+
 # Backend API URL
 VITE_BACKEND_URL=https://your-backend-api.com
 
 # Development mode (bypasses SAML authentication)
 VITE_DEV_MODE=true
 ```
+
+#### Environment Variables Explained
+
+- `VITE_APP_NAME`: The name displayed in the application header and login page (defaults to "SAML Portal")
+- `VITE_BACKEND_URL`: The base URL for your backend API
+- `VITE_DEV_MODE`: Set to `true` to bypass SAML authentication for local development
 
 ### Development Mode / Bypassing SAML Login
 
