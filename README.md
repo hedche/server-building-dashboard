@@ -43,7 +43,7 @@ Then edit the `.env` file with your configuration:
 
 ```env
 # Application Configuration
-VITE_APP_NAME=SAML Portal
+VITE_APP_NAME=Server Dashboard
 
 # Backend API URL
 VITE_BACKEND_URL=https://your-backend-api.com
