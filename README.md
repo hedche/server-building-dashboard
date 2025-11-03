@@ -230,6 +230,18 @@ Assign a server to a customer
 }
 ```
 
+#### `GET /api/hostnames`
+Get list of all available hostnames for build log search
+```json
+[
+  "server-001",
+  "server-002",
+  "web-prod-001",
+  "db-primary-001",
+  "..."
+]
+```
+
 ### Error Responses
 
 All endpoints should return appropriate HTTP status codes and error messages:
