@@ -9,6 +9,7 @@ import BuildOverviewPage from './pages/BuildOverviewPage';
 import PreconfigPage from './pages/PreconfigPage';
 import AssignPage from './pages/AssignPage';
 import BuildLogsPage from './pages/BuildLogsPage';
+import CredentialsPage from './pages/CredentialsPage';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="preconfig" element={<PreconfigPage />} />
             <Route path="assign" element={<AssignPage />} />
             <Route path="build-logs" element={<BuildLogsPage />} />
+            <Route path="credentials" element={<CredentialsPage />} />
           </Route>
           
           {/* Catch all route */}

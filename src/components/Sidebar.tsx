@@ -6,7 +6,8 @@ import {
   BarChart3, 
   Settings, 
   UserCheck,
-  FileText
+  FileText,
+  Key
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,6 +35,11 @@ const navigationItems = [
     name: 'Build Logs',
     path: '/build-logs',
     icon: FileText,
+  },
+  {
+    name: 'Credentials',
+    path: '/credentials',
+    icon: Key,
   },
 ];
 
