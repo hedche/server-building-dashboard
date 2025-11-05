@@ -50,10 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
     <div className={`bg-gray-800 border-r border-gray-700 transition-all duration-300 ${
       isCollapsed ? 'w-16' : 'w-64'
     }`}>
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        {!isCollapsed && (
-          <h1 className="text-lg font-bold text-green-400 font-mono">{import.meta.env.VITE_APP_NAME || 'Server Dashboard'}</h1>
-        )}
+      <div className="flex items-center justify-center p-4 border-b border-gray-700">
         <button
           onClick={toggleSidebar}
           className="p-1.5 rounded-lg hover:bg-gray-700 transition-colors text-gray-300"
