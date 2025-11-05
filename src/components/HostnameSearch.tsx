@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, forwardRef } from 'react';
 import { Search, Server } from 'lucide-react';
 
 interface HostnameSearchProps {
@@ -6,7 +6,7 @@ interface HostnameSearchProps {
   onHostnameSelect?: (hostname: string) => void;
 }
 
-const HostnameSearch: React.FC<HostnameSearchProps> = ({ hostnames, onHostnameSelect }) => {
+const HostnameSearch = forwardRef<HTMLInputElement, HostnameSearchProps>(({ hostnames, onHostnameSelect }, ref) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [showResults, setShowResults] = useState(false);
@@ -133,6 +133,7 @@ const HostnameSearch: React.FC<HostnameSearchProps> = ({ hostnames, onHostnameSe
           <Search size={16} className="text-gray-400" />
         </div>
         <input
+          ref={ref}
           type="text"
           value={searchTerm}
           onChange={handleInputChange}
@@ -174,6 +175,8 @@ const HostnameSearch: React.FC<HostnameSearchProps> = ({ hostnames, onHostnameSe
       )}
     </div>
   );
-};
+});
+
+HostnameSearch.displayName = 'HostnameSearch';
 
 export default HostnameSearch;

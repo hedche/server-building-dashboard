@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FileText, RefreshCw, AlertCircle } from 'lucide-react';
 import { useHostnames } from '../hooks/useHostnames';
 import HostnameSearch from '../components/HostnameSearch';
@@ -10,6 +10,13 @@ const BuildLogsPage: React.FC = () => {
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!hostnamesLoading && hostnames.length > 0 && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [hostnamesLoading, hostnames.length]);
 
   const generateMockLog = (): string => {
     const lines: string[] = [];
@@ -117,6 +124,7 @@ const BuildLogsPage: React.FC = () => {
             <h2 className="text-lg font-semibold text-white font-mono mb-4">Search Build Logs</h2>
             <div className="max-w-md">
               <HostnameSearch
+                ref={searchInputRef}
                 hostnames={hostnames}
                 onHostnameSelect={handleHostnameSelect}
               />
