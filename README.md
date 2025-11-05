@@ -83,6 +83,22 @@ npm run build
 npm run preview
 ```
 
+### Building Docker images (dev and prod)
+
+Build the production image (static build, VITE_BACKEND_URL set at build time):
+```bash
+docker build \
+  --build-arg VITE_BACKEND_URL=https://api.example.com \
+  --build-arg VITE_DEV_MODE=false \
+  -t server-dashboard:prod .
+# optional explicit target: --target production
+```
+
+Test it out with:
+```
+docker run -d --restart=unless-stopped -p 8080:8080 --name server-dashboard-prod server-dashboard:prod
+```
+
 ## Requirements for Backend API
 
 The frontend expects the following API endpoints and JSON response formats:
