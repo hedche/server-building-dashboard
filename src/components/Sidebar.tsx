@@ -58,18 +58,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
           {isCollapsed ? <Menu size={16} /> : <X size={16} />}
         </button>
       </div>
-      
+
       <nav className="mt-6">
         <ul className="space-y-1 px-2">
           {navigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
-            
+
             return (
               <li key={item.path}>
                 <Link
                   to={item.path}
                   className={`flex items-center p-2.5 rounded-lg transition-colors text-sm ${
+                    isCollapsed ? 'justify-center' : ''
+                  } ${
                     isActive
                       ? 'bg-green-600 text-white'
                       : 'text-gray-300 hover:bg-gray-700 hover:text-white'
