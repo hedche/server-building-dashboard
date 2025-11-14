@@ -6,8 +6,8 @@ const TopBar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
 
   return (
-    <header className="bg-gray-800 border-b border-gray-700 px-4 py-3">
-      <div className="flex items-center justify-between">
+    <header className="bg-gray-800 border-b border-gray-700 px-4 h-14">
+      <div className="flex items-center justify-between h-full">
         <h1 className="text-lg font-bold text-green-400 font-mono">{import.meta.env.VITE_APP_NAME || 'Server Dashboard'}</h1>
         <div>
           {isAuthenticated && user ? (
