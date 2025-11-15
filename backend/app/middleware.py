@@ -2,14 +2,13 @@
 Security middleware following DevSecOps best practices
 """
 
-from fastapi import Request, Response, HTTPException, status
+from fastapi import Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from typing import Callable, Dict
 import time
 import logging
 from collections import defaultdict
-from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 

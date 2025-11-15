@@ -3,7 +3,6 @@ Tests for middleware components
 """
 
 import pytest
-import time
 
 
 @pytest.mark.middleware

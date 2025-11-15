@@ -6,9 +6,8 @@ Implements SAML2 authentication and all required API endpoints
 from fastapi import FastAPI, Depends, HTTPException, status, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from fastapi.security import HTTPBearer
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime
 import secrets
 import time
 
@@ -19,8 +18,6 @@ from app.routers import build, preconfig, assign, server
 from app.middleware import SecurityHeadersMiddleware, RateLimitMiddleware
 from app.logger import (
     app_logger,
-    auth_logger,
-    api_logger,
     log_startup,
     log_request,
     log_auth_event,

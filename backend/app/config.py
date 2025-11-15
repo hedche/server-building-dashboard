@@ -5,7 +5,7 @@ Follows 12-factor app principles for configuration
 
 import os
 import json
-from typing import List, Optional, Union, Tuple
+from typing import List, Optional, Union
 from functools import lru_cache
 
 from pydantic import field_validator

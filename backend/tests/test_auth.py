@@ -5,8 +5,7 @@ Unit and integration tests for authentication
 import pytest
 from datetime import datetime, timedelta
 
-from app.auth import saml_auth, _sessions, get_current_user
-from app.models import User
+from app.auth import saml_auth, _sessions
 from fastapi import HTTPException
 
 

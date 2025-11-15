@@ -5,7 +5,7 @@ Returns mock data simulating database responses
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, List
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from app.models import User, BuildStatus, BuildHistory, Server
 from app.auth import get_current_user

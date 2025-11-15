@@ -11,7 +11,6 @@ from app.models import (
     Server,
     ServerDetails,
     BuildStatus,
-    BuildHistory,
     PreconfigData,
     PushPreconfigRequest,
     AssignRequest,

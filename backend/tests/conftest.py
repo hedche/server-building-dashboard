@@ -5,11 +5,9 @@ Shared test fixtures and configuration
 import pytest
 from fastapi.testclient import TestClient
 from typing import Dict, Any
-from datetime import datetime
 
 from main import app
 from app.auth import saml_auth, _sessions
-from app.models import User
 
 
 @pytest.fixture(scope="session")

@@ -275,7 +275,7 @@ async def get_current_user(request: Request) -> User:
     user_data = saml_auth.get_session(session_token)
 
     if not user_data:
-        logger.warning(f"Invalid or expired session token")
+        logger.warning("Invalid or expired session token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid",
