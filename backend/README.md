@@ -20,6 +20,21 @@ FastAPI backend with SAML2 authentication for the Server Building Dashboard.
 
 ## Quick Start
 
+### Option 1: Development Container (Fastest for Developers)
+
+For quick development without installing Python locally:
+
+```bash
+# Start the dev container (uses .env.dev automatically)
+docker-compose -f docker-compose.dev.yml up
+```
+
+That's it! The API will be available at `http://localhost:8000` with hot-reload enabled.
+
+**Note:** The dev instance uses placeholder SAML settings and mock data. For full SAML testing, see the manual setup below.
+
+### Option 2: Manual Setup (Full Control)
+
 ### 1. Setup SAML Metadata
 
 Create the SAML metadata directory and place your IDP metadata file:
@@ -76,10 +91,45 @@ The API will be available at `http://localhost:8000`
 
 ## Docker Deployment
 
-### Build and Run with Docker Compose
+### Development Instance (Recommended for Developers)
+
+The development instance uses relaxed security settings, verbose logging, and hot-reload for faster iteration:
 
 ```bash
-# Build and start
+# Build and start dev container
+docker-compose -f docker-compose.dev.yml up -d
+
+# View logs
+docker-compose -f docker-compose.dev.yml logs -f
+
+# Stop
+docker-compose -f docker-compose.dev.yml down
+```
+
+**Dev Instance Features:**
+- Hot-reload: Code changes in `app/` and `main.py` automatically restart the server
+- Uses `.env.dev` with development-friendly settings
+- Debug logging enabled
+- Relaxed rate limits (1000/min)
+- Extended session lifetime (24 hours)
+- CORS enabled for common dev ports
+
+**Quick Start:**
+```bash
+# One command to start dev backend
+docker-compose -f docker-compose.dev.yml up
+```
+
+The API will be available at `http://localhost:8000`
+- API Documentation: `http://localhost:8000/api/docs`
+- Health Check: `http://localhost:8000/health`
+
+### Production Deployment
+
+Production instance with security hardening, minimal attack surface, and optimized performance:
+
+```bash
+# Build and start production container
 docker-compose up -d
 
 # View logs
@@ -89,14 +139,35 @@ docker-compose logs -f
 docker-compose down
 ```
 
+**Production Features:**
+- Non-root user execution
+- Read-only filesystem
+- Minimal security capabilities
+- Proper rate limiting
+- Production-grade settings from `.env`
+
 ### Build Docker Image Manually
 
+**Development:**
 ```bash
-docker build -t server-dashboard-backend .
+docker build -t server-dashboard-backend:dev .
+docker run -p 8000:8000 \
+  -v $(pwd)/app:/app/app:ro \
+  -v $(pwd)/main.py:/app/main.py:ro \
+  -v $(pwd)/.env.dev:/app/.env:ro \
+  -v $(pwd)/saml_metadata:/app/saml_metadata:ro \
+  -e ENVIRONMENT=development \
+  server-dashboard-backend:dev \
+  uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Production:**
+```bash
+docker build -t server-dashboard-backend:prod .
 docker run -p 8000:8000 \
   -v $(pwd)/saml_metadata:/app/saml_metadata:ro \
   -v $(pwd)/.env:/app/.env:ro \
-  server-dashboard-backend
+  server-dashboard-backend:prod
 ```
 
 ## API Endpoints

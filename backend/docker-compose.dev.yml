@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  backend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: server-dashboard-backend-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for hot-reload (if using uvicorn --reload)
+      - ./app:/app/app:ro
+      - ./main.py:/app/main.py:ro
+      # Mount dev environment file
+      - ./.env.dev:/app/.env:ro
+      # Mount SAML metadata directory (optional for dev)
+      - ./saml_metadata:/app/saml_metadata:ro
+    environment:
+      - ENVIRONMENT=development
+      - PYTHONUNBUFFERED=1
+    # Override CMD to use uvicorn with reload for development
+    command: ["uvicorn", "main:app", "--reload", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
+    restart: unless-stopped
+    networks:
+      - backend-dev-network
+    # Less restrictive security for development
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  backend-dev-network:
+    driver: bridge
