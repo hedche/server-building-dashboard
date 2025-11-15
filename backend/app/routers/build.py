@@ -4,13 +4,11 @@ Returns mock data simulating database responses
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, List
-import logging
 from datetime import datetime, timedelta
 
 from app.models import User, BuildStatus, BuildHistory, Server
 from app.auth import get_current_user
-
-logger = logging.getLogger(__name__)
+from app.logger import api_logger, log_error
 
 router = APIRouter()
 
@@ -169,15 +167,15 @@ async def get_build_status(
     Returns active server builds with progress
     """
     try:
-        logger.info(f"Build status requested by {current_user.email}")
-        
+        api_logger.info(f"Build status requested by {current_user.email}")
+
         # Simulate database query
         data = generate_mock_build_status()
-        
+
         return BuildStatus(**data)
-        
+
     except Exception as e:
-        logger.error(f"Error fetching build status: {str(e)}")
+        log_error(e, context="Fetching build status", extra={"user": current_user.email})
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch build status"
@@ -208,17 +206,17 @@ async def get_build_history(
                 detail="Invalid date format. Use YYYY-MM-DD"
             )
         
-        logger.info(f"Build history for {date} requested by {current_user.email}")
-        
+        api_logger.info(f"Build history for {date} requested by {current_user.email}")
+
         # Simulate database query
         data = generate_mock_build_history(date)
-        
+
         return BuildHistory(**data)
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching build history: {str(e)}")
+        log_error(e, context=f"Fetching build history for {date}", extra={"user": current_user.email})
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch build history"

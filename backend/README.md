@@ -236,6 +236,8 @@ docker run -p 8000:8000 \
 | `SESSION_LIFETIME_SECONDS` | Session lifetime in seconds | No | 28800 (8 hours) |
 | `RATE_LIMIT_PER_MINUTE` | Rate limit per minute | No | 60 |
 | `RATE_LIMIT_BURST` | Rate limit burst | No | 100 |
+| `LOG_LEVEL` | Logging level (DEBUG/INFO/WARNING/ERROR) | No | INFO |
+| `LOG_DIR` | Directory for log files | No | /var/log/server-building-dashboard |
 
 ### SAML Configuration
 
@@ -304,15 +306,66 @@ server {
 
 ## Logging
 
-The application logs to stdout/stderr. Configure log aggregation for production:
+The application uses a comprehensive logging system with separate log files for different components.
+
+### Log Files
+
+All logs are stored in the directory specified by `LOG_DIR` (default: `/var/log/server-building-dashboard`):
+
+| Log File | Purpose | Contents |
+|----------|---------|----------|
+| `app.log` | Application | General application events and lifecycle |
+| `auth.log` | Authentication | Login, logout, and authentication events |
+| `api.log` | API Requests | All HTTP requests with timing and status codes |
+| `error.log` | Errors | All errors and exceptions with stack traces |
+| `security.log` | Security | Security-related events and warnings |
+
+### Log Features
+
+- **Automatic Rotation**: Logs rotate at 10MB with 5 backup files
+- **Structured Format**: Timestamp, level, module, function, and message
+- **Console Output**: Logs also appear in stdout for Docker/systemd
+- **Request Logging**: All API requests logged with duration and status
+- **Error Context**: Full exception traces with contextual information
+
+### Development Logging
+
+In development mode (`.env.dev`), logs are written to `./logs/` directory with DEBUG level for more verbose output.
+
+### Production Logging
+
+Configure log aggregation for production:
 
 ```bash
 # View logs in Docker
 docker-compose logs -f backend
 
-# Save logs to file
+# View specific log file
+docker exec server-dashboard-backend cat /var/log/server-building-dashboard/app.log
+
+# Tail error log
+docker exec server-dashboard-backend tail -f /var/log/server-building-dashboard/error.log
+
+# Save all logs to file
 docker-compose logs backend > backend.log
 ```
+
+### Log Directory Permissions
+
+Ensure the application has write permissions to the log directory:
+
+```bash
+# Create log directory
+sudo mkdir -p /var/log/server-building-dashboard
+
+# Set ownership (use appropriate user/group)
+sudo chown -R appuser:appuser /var/log/server-building-dashboard
+
+# Or make it writable (less secure)
+sudo chmod 777 /var/log/server-building-dashboard
+```
+
+**Note**: If the application cannot write to `LOG_DIR`, it will automatically fall back to `./logs` in the current directory.
 
 ## Monitoring
 
@@ -344,22 +397,112 @@ Monitor these key metrics:
 
 ### Running Tests
 
-```bash
-# Install dev dependencies
-pip install pytest pytest-asyncio httpx
+The backend includes comprehensive test coverage with unit tests, integration tests, and security checks.
 
-# Run tests
+#### Quick Start
+
+```bash
+# Install test dependencies
+pip install -r requirements.txt
+
+# Run all tests
 pytest
+
+# Run with verbose output
+pytest -v
+
+# Run specific test categories
+pytest -m unit          # Unit tests only
+pytest -m integration   # Integration tests only
+pytest -m auth          # Authentication tests only
+pytest -m middleware    # Middleware tests only
 ```
+
+#### Test Coverage
+
+```bash
+# Run tests with coverage report
+pytest --cov=app --cov=main --cov-report=term-missing
+
+# Generate HTML coverage report
+pytest --cov=app --cov=main --cov-report=html
+
+# View HTML report
+open htmlcov/index.html  # macOS
+xdg-open htmlcov/index.html  # Linux
+```
+
+#### Test Structure
+
+```
+tests/
+├── conftest.py              # Shared fixtures and test configuration
+├── test_models.py           # Unit tests for Pydantic models
+├── test_auth.py             # Authentication and session tests
+├── test_middleware.py       # Middleware functionality tests
+├── test_api_health.py       # Health and root endpoint tests
+├── test_api_build.py        # Build status API tests
+├── test_api_server.py       # Server details API tests
+├── test_api_assign.py       # Server assignment API tests
+└── test_api_preconfig.py    # Preconfig management API tests
+```
+
+#### Test Categories
+
+- **Unit Tests** (`-m unit`): Test individual components in isolation
+  - Model validation and serialization
+  - Utility functions
+  - Business logic
+
+- **Integration Tests** (`-m integration`): Test API endpoints end-to-end
+  - HTTP request/response handling
+  - Authentication flows
+  - Data serialization
+
+- **Auth Tests** (`-m auth`): Test authentication and authorization
+  - SAML authentication logic
+  - Session management
+  - User permissions
+
+- **Middleware Tests** (`-m middleware`): Test middleware components
+  - Security headers
+  - Rate limiting
+  - Request logging
+  - CORS configuration
+
+#### Continuous Integration
+
+Tests run automatically on GitHub Actions for:
+- Push to `main` or `develop` branches
+- Pull requests to `main` or `develop`
+- Manual workflow dispatch
+
+The CI pipeline includes:
+1. **Test Suite**: Run all tests on Python 3.11 and 3.12
+2. **Code Quality**: Black formatting and Ruff linting
+3. **Security Checks**: Bandit and Safety scans
+4. **Coverage Reports**: Uploaded to Codecov
 
 ### Code Quality
 
 ```bash
-# Format code
+# Format code with Black
 black .
 
-# Lint code
+# Check formatting without changes
+black --check .
+
+# Lint code with Ruff
 ruff check .
+
+# Auto-fix linting issues
+ruff check --fix .
+
+# Run security scan with Bandit
+bandit -r app/ main.py
+
+# Check dependency vulnerabilities
+safety check
 ```
 
 ## Troubleshooting

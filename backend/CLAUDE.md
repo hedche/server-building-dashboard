@@ -30,14 +30,26 @@ gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
 
 ### Testing
 ```bash
-# Install test dependencies first
-pip install pytest pytest-asyncio httpx
+# Install test dependencies
+pip install -r requirements.txt
 
-# Run tests
+# Run all tests
 pytest
 
-# Run with verbose output
-pytest -v
+# Run with verbose output and coverage
+pytest -v --cov=app --cov=main --cov-report=term-missing
+
+# Run specific test categories
+pytest -m unit          # Unit tests only
+pytest -m integration   # Integration tests only
+pytest -m auth          # Authentication tests
+pytest -m middleware    # Middleware tests
+
+# Run a specific test file
+pytest tests/test_models.py
+
+# Run a specific test
+pytest tests/test_models.py::TestUser::test_user_creation_valid
 ```
 
 ### Code Quality
@@ -185,6 +197,51 @@ All endpoints except `/saml/login`, `/auth/callback`, `/health`, and root requir
 **Preconfig**: `/api/preconfigs`, `/api/push-preconfig`
 
 API docs available at `/api/docs` in development mode only.
+
+## Testing
+
+### Test Structure
+
+The backend uses pytest for comprehensive test coverage:
+
+- **tests/conftest.py**: Shared fixtures including test client, mock users, mock data
+- **tests/test_models.py**: Unit tests for Pydantic models (validation, enums, defaults)
+- **tests/test_auth.py**: Authentication tests (SAML processing, session management, user extraction)
+- **tests/test_middleware.py**: Middleware tests (security headers, rate limiting, CORS)
+- **tests/test_api_*.py**: Integration tests for each API router
+
+### Test Fixtures
+
+Key fixtures available in conftest.py:
+- `client`: FastAPI TestClient for making HTTP requests
+- `authenticated_user`: Creates session with regular user role
+- `authenticated_admin`: Creates session with admin role
+- `mock_user_data`: Dictionary with mock user data
+- `mock_saml_attributes`: Mock SAML response attributes
+- `clear_sessions`: Automatically clears sessions before/after each test
+
+### Writing Tests
+
+When adding new features:
+1. Add unit tests for new models/functions
+2. Add integration tests for new endpoints
+3. Test both authenticated and unauthenticated access
+4. Test validation and error cases
+5. Use appropriate markers: `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.auth`, `@pytest.mark.middleware`
+
+### CI/CD
+
+GitHub Actions workflow (`.github/workflows/backend-tests.yml`) runs on:
+- Push to main/develop
+- Pull requests to main/develop
+- Manual trigger via workflow_dispatch
+
+The workflow includes:
+- Test suite on Python 3.11 and 3.12
+- Code formatting check (Black)
+- Linting (Ruff)
+- Security scanning (Bandit, Safety)
+- Coverage reporting (Codecov)
 
 ## Security Considerations
 

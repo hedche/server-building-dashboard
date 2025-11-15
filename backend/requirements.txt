@@ -18,10 +18,13 @@ lxml
 # For production deployment
 gunicorn
 
-# Development dependencies (optional)
-# pytest==8.0.0
-# pytest-asyncio==0.23.4
-# httpx==0.26.0
-# black==24.1.1
-# ruff==0.2.1
+# Testing dependencies
+pytest>=8.0.0
+pytest-asyncio>=0.23.4
+pytest-cov>=4.1.0
+httpx>=0.26.0
+
+# Code quality tools
+black>=24.1.1
+ruff>=0.2.1
 

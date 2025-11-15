@@ -7,31 +7,32 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer
 from contextlib import asynccontextmanager
-import logging
 from datetime import datetime, timedelta
 import secrets
+import time
 
 from app.config import settings
 from app.auth import saml_auth, get_current_user
 from app.models import User
 from app.routers import build, preconfig, assign, server
 from app.middleware import SecurityHeadersMiddleware, RateLimitMiddleware
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+from app.logger import (
+    app_logger,
+    auth_logger,
+    api_logger,
+    log_startup,
+    log_request,
+    log_auth_event,
+    log_error
 )
-logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
-    logger.info("Starting Server Building Dashboard Backend")
-    logger.info(f"Environment: {settings.ENVIRONMENT}")
-    logger.info(f"CORS Origins: {settings.CORS_ORIGINS}")
+    log_startup()
+    app_logger.info(f"CORS Origins: {settings.CORS_ORIGINS}")
     yield
-    logger.info("Shutting down Server Building Dashboard Backend")
+    app_logger.info("Shutting down Server Building Dashboard Backend")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -42,6 +43,34 @@ app = FastAPI(
     docs_url="/api/docs" if settings.ENVIRONMENT == "development" else None,
     redoc_url="/api/redoc" if settings.ENVIRONMENT == "development" else None,
 )
+
+# Request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log all requests with timing"""
+    start_time = time.time()
+
+    # Get client IP
+    client_ip = request.client.host if request.client else "unknown"
+    if forwarded_for := request.headers.get("X-Forwarded-For"):
+        client_ip = forwarded_for.split(",")[0].strip()
+
+    # Process request
+    response = await call_next(request)
+
+    # Calculate duration
+    duration_ms = (time.time() - start_time) * 1000
+
+    # Log the request
+    log_request(
+        endpoint=request.url.path,
+        method=request.method,
+        status_code=response.status_code,
+        duration_ms=duration_ms,
+        client_ip=client_ip
+    )
+
+    return response
 
 # Add security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
@@ -81,13 +110,15 @@ async def health_check():
 async def saml_login(request: Request):
     """Initiate SAML login"""
     try:
+        log_auth_event("SAML login initiated", details="Redirecting to IDP")
         auth_request = saml_auth.prepare_auth_request(request)
         return RedirectResponse(
             url=auth_request['url'],
             status_code=status.HTTP_302_FOUND
         )
     except Exception as e:
-        logger.error(f"SAML login error: {str(e)}")
+        log_error(e, context="SAML login initialization")
+        log_auth_event("SAML login failed", success=False, details=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="SAML authentication initialization failed"
@@ -99,21 +130,22 @@ async def saml_callback(request: Request, response: Response):
     try:
         form_data = await request.form()
         saml_response = form_data.get("SAMLResponse")
-        
+
         if not saml_response:
+            log_auth_event("SAML callback failed", success=False, details="Missing SAMLResponse")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Missing SAMLResponse"
             )
-        
+
         user_data = saml_auth.process_saml_response(saml_response, request)
-        
+
         # Create session token
         session_token = secrets.token_urlsafe(32)
-        
+
         # Store session (in production, use Redis or similar)
         saml_auth.store_session(session_token, user_data)
-        
+
         # Set secure cookie
         response.set_cookie(
             key="session_token",
@@ -124,15 +156,18 @@ async def saml_callback(request: Request, response: Response):
             max_age=settings.SESSION_LIFETIME_SECONDS,
             domain=settings.COOKIE_DOMAIN
         )
-        
+
+        log_auth_event("User authenticated", user_email=user_data.get('email'), success=True)
+
         # Redirect to frontend
         return RedirectResponse(
             url=f"{settings.FRONTEND_URL}/auth/callback",
             status_code=status.HTTP_302_FOUND
         )
-        
+
     except Exception as e:
-        logger.error(f"SAML callback error: {str(e)}")
+        log_error(e, context="SAML callback processing")
+        log_auth_event("SAML authentication failed", success=False, details=str(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="SAML authentication failed"
@@ -151,9 +186,9 @@ async def logout(response: Response, current_user: User = Depends(get_current_us
         key="session_token",
         domain=settings.COOKIE_DOMAIN
     )
-    
-    logger.info(f"User logged out: {current_user.email}")
-    
+
+    log_auth_event("User logged out", user_email=current_user.email, success=True)
+
     return {"status": "success", "message": "Logged out successfully"}
 
 # Root endpoint
