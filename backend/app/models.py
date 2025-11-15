@@ -93,8 +93,8 @@ class PreconfigData(BaseModel):
 
 class PushPreconfigRequest(BaseModel):
     """Push preconfig request model"""
-    depot: int = Field(..., ge=1, le=4)
-    
+    depot: int = Field(..., ge=1)
+
     @validator('depot')
     def validate_depot(cls, v):
         valid_depots = [1, 2, 4]

@@ -4,7 +4,7 @@ Follows 12-factor app principles for configuration
 """
 import os
 import json
-from typing import List, Optional
+from typing import List, Optional, Union, Tuple
 from functools import lru_cache
 
 from pydantic import field_validator
@@ -24,8 +24,8 @@ class Settings(BaseSettings):
     SESSION_LIFETIME_SECONDS: int = 28800  # 8 hours
     COOKIE_DOMAIN: Optional[str] = None
 
-    # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # CORS - accept either a list or a comma/JSON string from .env
+    CORS_ORIGINS: Union[List[str], str] = ["http://localhost:5173", "http://localhost:3000"]
 
     # Frontend
     FRONTEND_URL: str = "http://localhost:5173"
@@ -60,37 +60,43 @@ class Settings(BaseSettings):
         Accept either:
          - a JSON array string: ["http://a","http://b"]
          - a comma-separated string: http://a,http://b
-         - an actual list from the environment loader
+         - an actual list provided by the environment loader
+        This runs before pydantic's type coercion to avoid dotenv parsing errors.
         """
+        if v is None:
+            return []
+        if isinstance(v, (list, tuple)):
+            return [str(x) for x in v]
         if isinstance(v, str):
             s = v.strip()
             if not s:
                 return []
-            # try JSON array first
             if s.startswith("[") and s.endswith("]"):
                 try:
                     parsed = json.loads(s)
                     if isinstance(parsed, list):
-                        return parsed
+                        return [str(x) for x in parsed]
                 except Exception:
                     pass
-            # comma-separated fallback
             return [item.strip().strip('"').strip("'") for item in s.split(",") if item.strip()]
-        return v
+        return [item.strip() for item in str(v).split(",") if item.strip()]
 
-    def get_saml_settings(self) -> dict:
+    def get_saml_settings(self) -> tuple[dict, Optional[str]]:
         """
-        Generate SAML settings dictionary for python3-saml.
-        Returns an empty dict if metadata file is missing.
+        Return (saml_settings_dict, idp_metadata_str_or_none).
+
+        - saml_settings_dict: dict suitable for python3-saml (contains "idp_metadata" when present)
+        - idp_metadata_str_or_none: raw metadata XML string or None if missing/error
         """
         if not os.path.exists(self.SAML_METADATA_PATH):
-            return {}
+            return {}, None
         try:
             with open(self.SAML_METADATA_PATH, "r", encoding="utf-8") as f:
                 metadata = f.read()
-            return {"idp_metadata": metadata}
+            saml_settings = {"idp_metadata": metadata}
+            return saml_settings, metadata
         except Exception:
-            return {}
+            return {}, None
 
 
 @lru_cache()

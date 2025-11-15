@@ -179,12 +179,23 @@ async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 @app.post("/logout", tags=["auth"])
-async def logout(response: Response, current_user: User = Depends(get_current_user)):
+async def logout(request: Request, response: Response, current_user: User = Depends(get_current_user)):
     """Logout and clear session"""
-    # Clear session cookie
+    # Get session token from cookie
+    session_token = request.cookies.get("session_token")
+
+    # Delete session from memory
+    if session_token:
+        saml_auth.delete_session(session_token)
+
+    # Clear session cookie with all parameters matching set_cookie
     response.delete_cookie(
         key="session_token",
-        domain=settings.COOKIE_DOMAIN
+        path="/",
+        domain=settings.COOKIE_DOMAIN,
+        httponly=True,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="lax"
     )
 
     log_auth_event("User logged out", user_email=current_user.email, success=True)
