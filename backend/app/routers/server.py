@@ -1,6 +1,7 @@
 """
 Server details endpoints
 """
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 import logging
 from datetime import datetime, timedelta
@@ -34,7 +35,7 @@ def generate_mock_server_details(hostname: str) -> ServerDetails:
         storage_gb=4000,
         install_start_time=datetime.utcnow() - timedelta(hours=2),
         estimated_completion=datetime.utcnow() + timedelta(hours=1),
-        last_heartbeat=datetime.utcnow() - timedelta(minutes=5)
+        last_heartbeat=datetime.utcnow() - timedelta(minutes=5),
     )
 
 
@@ -42,11 +43,11 @@ def generate_mock_server_details(hostname: str) -> ServerDetails:
     "/server-details",
     response_model=ServerDetails,
     summary="Get server details",
-    description="Get detailed information about a specific server by hostname"
+    description="Get detailed information about a specific server by hostname",
 )
 async def get_server_details(
     hostname: str = Query(..., description="Server hostname"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> ServerDetails:
     """
     Get detailed information about a specific server
@@ -55,22 +56,21 @@ async def get_server_details(
     try:
         if not hostname:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Hostname is required"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Hostname is required"
             )
-        
+
         logger.info(f"Server details for {hostname} requested by {current_user.email}")
-        
+
         # Simulate database query
         server_details = generate_mock_server_details(hostname)
-        
+
         return server_details
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error fetching server details: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch server details"
+            detail="Failed to fetch server details",
         )

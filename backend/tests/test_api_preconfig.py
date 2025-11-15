@@ -1,6 +1,7 @@
 """
 Integration tests for preconfig management endpoints
 """
+
 import pytest
 
 
@@ -95,11 +96,7 @@ class TestPushPreconfigEndpoint:
 
     def test_push_preconfig_depot_region_mapping(self, client, authenticated_user):
         """Test depot numbers map to correct regions in response"""
-        depot_region_map = {
-            1: "CBG",
-            2: "DUB",
-            4: "DAL"
-        }
+        depot_region_map = {1: "CBG", 2: "DUB", 4: "DAL"}
 
         for depot, region in depot_region_map.items():
             response = client.post("/api/push-preconfig", json={"depot": depot})

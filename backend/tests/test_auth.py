@@ -1,6 +1,7 @@
 """
 Unit and integration tests for authentication
 """
+
 import pytest
 from datetime import datetime, timedelta
 
@@ -16,8 +17,7 @@ class TestSAMLAuth:
     def test_extract_user_data(self, mock_saml_attributes):
         """Test extracting user data from SAML attributes"""
         user_data = saml_auth._extract_user_data(
-            "test@example.com",
-            mock_saml_attributes
+            "test@example.com", mock_saml_attributes
         )
 
         assert user_data["id"] == "test@example.com"
@@ -29,16 +29,19 @@ class TestSAMLAuth:
     def test_extract_user_data_admin_role(self):
         """Test role determination for admin users"""
         admin_attributes = {
-            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": ["admin@example.com"],
-            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname": ["Admin"],
+            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": [
+                "admin@example.com"
+            ],
+            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname": [
+                "Admin"
+            ],
             "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname": ["User"],
-            "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups": ["Dashboard-Admins"]
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups": [
+                "Dashboard-Admins"
+            ],
         }
 
-        user_data = saml_auth._extract_user_data(
-            "admin@example.com",
-            admin_attributes
-        )
+        user_data = saml_auth._extract_user_data("admin@example.com", admin_attributes)
 
         assert user_data["role"] == "admin"
         assert "Dashboard-Admins" in user_data["groups"]
@@ -46,13 +49,16 @@ class TestSAMLAuth:
     def test_extract_user_data_operator_role(self):
         """Test role determination for operator users"""
         operator_attributes = {
-            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": ["operator@example.com"],
-            "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups": ["Dashboard-Operators"]
+            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": [
+                "operator@example.com"
+            ],
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups": [
+                "Dashboard-Operators"
+            ],
         }
 
         user_data = saml_auth._extract_user_data(
-            "operator@example.com",
-            operator_attributes
+            "operator@example.com", operator_attributes
         )
 
         assert user_data["role"] == "operator"
@@ -125,7 +131,7 @@ class TestSessionManagement:
         _sessions[token] = {
             "user_data": mock_user_data,
             "created_at": datetime.utcnow() - timedelta(hours=2),
-            "expires_at": datetime.utcnow() - timedelta(hours=1)
+            "expires_at": datetime.utcnow() - timedelta(hours=1),
         }
 
         result = saml_auth.get_session(token)
@@ -175,7 +181,7 @@ class TestGetCurrentUser:
         _sessions[token] = {
             "user_data": mock_user_data,
             "created_at": datetime.utcnow() - timedelta(hours=2),
-            "expires_at": datetime.utcnow() - timedelta(hours=1)
+            "expires_at": datetime.utcnow() - timedelta(hours=1),
         }
 
         client.cookies.set("session_token", token)
@@ -188,7 +194,9 @@ class TestGetCurrentUser:
 class TestAuthEndpoints:
     """Tests for authentication endpoints"""
 
-    def test_me_endpoint_authenticated(self, client, authenticated_user, mock_user_data):
+    def test_me_endpoint_authenticated(
+        self, client, authenticated_user, mock_user_data
+    ):
         """Test /me endpoint returns user data when authenticated"""
         response = client.get("/me")
 

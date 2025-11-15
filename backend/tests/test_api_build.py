@@ -1,6 +1,7 @@
 """
 Integration tests for build status endpoints
 """
+
 import pytest
 
 
@@ -101,7 +102,9 @@ class TestBuildHistoryEndpoint:
             response = client.get(f"/api/build-history/{date}")
             assert response.status_code == 200, f"Failed for date {date}"
 
-    def test_build_history_server_structure(self, client, authenticated_user, sample_date):
+    def test_build_history_server_structure(
+        self, client, authenticated_user, sample_date
+    ):
         """Test build history servers have correct structure"""
         response = client.get(f"/api/build-history/{sample_date}")
         data = response.json()
@@ -114,5 +117,9 @@ class TestBuildHistoryEndpoint:
             # Verify server has required fields
             assert "hostname" in server
             assert "percent_built" in server
-            assert server["percent_built"] == 100, "Historical builds should be 100% complete"
-            assert server["status"] == "complete", "Historical builds should have 'complete' status"
+            assert (
+                server["percent_built"] == 100
+            ), "Historical builds should be 100% complete"
+            assert (
+                server["status"] == "complete"
+            ), "Historical builds should have 'complete' status"

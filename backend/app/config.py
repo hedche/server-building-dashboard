@@ -2,6 +2,7 @@
 Configuration management using Pydantic Settings
 Follows 12-factor app principles for configuration
 """
+
 import os
 import json
 from typing import List, Optional, Union, Tuple
@@ -25,7 +26,10 @@ class Settings(BaseSettings):
     COOKIE_DOMAIN: Optional[str] = None
 
     # CORS - accept either a list or a comma/JSON string from .env
-    CORS_ORIGINS: Union[List[str], str] = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS: Union[List[str], str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ]
 
     # Frontend
     FRONTEND_URL: str = "http://localhost:5173"
@@ -78,7 +82,11 @@ class Settings(BaseSettings):
                         return [str(x) for x in parsed]
                 except Exception:
                     pass
-            return [item.strip().strip('"').strip("'") for item in s.split(",") if item.strip()]
+            return [
+                item.strip().strip('"').strip("'")
+                for item in s.split(",")
+                if item.strip()
+            ]
         return [item.strip() for item in str(v).split(",") if item.strip()]
 
     def get_saml_settings(self) -> tuple[dict, Optional[str]]:

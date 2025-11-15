@@ -2,6 +2,7 @@
 Build status endpoints
 Returns mock data simulating database responses
 """
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, List
 from datetime import datetime, timedelta
@@ -28,7 +29,7 @@ def generate_mock_build_status() -> Dict[str, List[Server]]:
                 percent_built=55,
                 assigned_status="not assigned",
                 machine_type="Server",
-                status="installing"
+                status="installing",
             ),
             Server(
                 rackID="2-A",
@@ -38,7 +39,7 @@ def generate_mock_build_status() -> Dict[str, List[Server]]:
                 percent_built=75,
                 assigned_status="not assigned",
                 machine_type="Server",
-                status="installing"
+                status="installing",
             ),
             Server(
                 rackID="3-C",
@@ -48,7 +49,7 @@ def generate_mock_build_status() -> Dict[str, List[Server]]:
                 percent_built=100,
                 assigned_status="assigned",
                 machine_type="Server",
-                status="complete"
+                status="complete",
             ),
         ],
         "dub": [
@@ -60,7 +61,7 @@ def generate_mock_build_status() -> Dict[str, List[Server]]:
                 percent_built=45,
                 assigned_status="not assigned",
                 machine_type="Server",
-                status="installing"
+                status="installing",
             ),
             Server(
                 rackID="2-D",
@@ -70,7 +71,7 @@ def generate_mock_build_status() -> Dict[str, List[Server]]:
                 percent_built=90,
                 assigned_status="not assigned",
                 machine_type="Server",
-                status="installing"
+                status="installing",
             ),
         ],
         "dal": [
@@ -82,7 +83,7 @@ def generate_mock_build_status() -> Dict[str, List[Server]]:
                 percent_built=30,
                 assigned_status="not assigned",
                 machine_type="Server",
-                status="installing"
+                status="installing",
             ),
             Server(
                 rackID="3-E",
@@ -92,9 +93,9 @@ def generate_mock_build_status() -> Dict[str, List[Server]]:
                 percent_built=15,
                 assigned_status="not assigned",
                 machine_type="Server",
-                status="failed"
+                status="failed",
             ),
-        ]
+        ],
     }
 
 
@@ -113,7 +114,7 @@ def generate_mock_build_history(date: str) -> Dict[str, List[Server]]:
                 percent_built=100,
                 assigned_status="assigned",
                 machine_type="Server",
-                status="complete"
+                status="complete",
             ),
             Server(
                 rackID="2-B",
@@ -123,7 +124,7 @@ def generate_mock_build_history(date: str) -> Dict[str, List[Server]]:
                 percent_built=100,
                 assigned_status="not assigned",
                 machine_type="Server",
-                status="complete"
+                status="complete",
             ),
         ],
         "dub": [
@@ -135,7 +136,7 @@ def generate_mock_build_history(date: str) -> Dict[str, List[Server]]:
                 percent_built=100,
                 assigned_status="assigned",
                 machine_type="Server",
-                status="complete"
+                status="complete",
             ),
         ],
         "dal": [
@@ -147,9 +148,9 @@ def generate_mock_build_history(date: str) -> Dict[str, List[Server]]:
                 percent_built=100,
                 assigned_status="not assigned",
                 machine_type="Server",
-                status="complete"
+                status="complete",
             ),
-        ]
+        ],
     }
 
 
@@ -157,10 +158,10 @@ def generate_mock_build_history(date: str) -> Dict[str, List[Server]]:
     "/build-status",
     response_model=BuildStatus,
     summary="Get current build status",
-    description="Get current build status across all regions"
+    description="Get current build status across all regions",
 )
 async def get_build_status(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> BuildStatus:
     """
     Get current build status for all regions
@@ -175,10 +176,12 @@ async def get_build_status(
         return BuildStatus(**data)
 
     except Exception as e:
-        log_error(e, context="Fetching build status", extra={"user": current_user.email})
+        log_error(
+            e, context="Fetching build status", extra={"user": current_user.email}
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch build status"
+            detail="Failed to fetch build status",
         )
 
 
@@ -186,11 +189,10 @@ async def get_build_status(
     "/build-history/{date}",
     response_model=BuildHistory,
     summary="Get build history",
-    description="Get build history for a specific date (YYYY-MM-DD format)"
+    description="Get build history for a specific date (YYYY-MM-DD format)",
 )
 async def get_build_history(
-    date: str,
-    current_user: User = Depends(get_current_user)
+    date: str, current_user: User = Depends(get_current_user)
 ) -> BuildHistory:
     """
     Get build history for a specific date
@@ -203,9 +205,9 @@ async def get_build_history(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid date format. Use YYYY-MM-DD"
+                detail="Invalid date format. Use YYYY-MM-DD",
             )
-        
+
         api_logger.info(f"Build history for {date} requested by {current_user.email}")
 
         # Simulate database query
@@ -216,8 +218,12 @@ async def get_build_history(
     except HTTPException:
         raise
     except Exception as e:
-        log_error(e, context=f"Fetching build history for {date}", extra={"user": current_user.email})
+        log_error(
+            e,
+            context=f"Fetching build history for {date}",
+            extra={"user": current_user.email},
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch build history"
+            detail="Failed to fetch build history",
         )

@@ -1,6 +1,7 @@
 """
 Integration tests for server details endpoints
 """
+
 import pytest
 
 

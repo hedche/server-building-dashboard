@@ -1,6 +1,7 @@
 """
 Integration tests for health and root endpoints
 """
+
 import pytest
 from datetime import datetime
 

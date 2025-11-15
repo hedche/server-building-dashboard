@@ -1,6 +1,7 @@
 """
 Tests for middleware components
 """
+
 import pytest
 import time
 
@@ -145,18 +146,19 @@ class TestCORS:
     def test_cors_headers_present(self, client):
         """Test that CORS headers are present for allowed origins"""
         response = client.options(
-            "/api/build-status",
-            headers={"Origin": "http://localhost:5173"}
+            "/api/build-status", headers={"Origin": "http://localhost:5173"}
         )
 
         # FastAPI/Starlette CORS middleware handles OPTIONS requests
-        assert response.status_code in [200, 405]  # Some endpoints might not allow OPTIONS
+        assert response.status_code in [
+            200,
+            405,
+        ]  # Some endpoints might not allow OPTIONS
 
     def test_cors_allows_credentials(self, client, authenticated_user):
         """Test that CORS allows credentials"""
         response = client.get(
-            "/api/build-status",
-            headers={"Origin": "http://localhost:5173"}
+            "/api/build-status", headers={"Origin": "http://localhost:5173"}
         )
 
         # Request should succeed (CORS allows the origin)

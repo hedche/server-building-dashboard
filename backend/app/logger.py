@@ -2,6 +2,7 @@
 Logging configuration for the Server Building Dashboard backend.
 Creates separate log files for different components with rotation.
 """
+
 import logging
 import sys
 from pathlib import Path
@@ -25,25 +26,30 @@ class LoggerSetup:
             self.log_dir.mkdir(parents=True, exist_ok=True)
         except PermissionError:
             # Fallback to local directory if we don't have permission
-            print(f"Warning: Cannot write to {self.log_dir}, falling back to ./logs", file=sys.stderr)
+            print(
+                f"Warning: Cannot write to {self.log_dir}, falling back to ./logs",
+                file=sys.stderr,
+            )
             self.log_dir = Path("./logs")
             self.log_dir.mkdir(parents=True, exist_ok=True)
 
-    def _create_file_handler(self, filename: str, level: int = None) -> RotatingFileHandler:
+    def _create_file_handler(
+        self, filename: str, level: int = None
+    ) -> RotatingFileHandler:
         """Create a rotating file handler"""
         log_file = self.log_dir / filename
         handler = RotatingFileHandler(
             log_file,
             maxBytes=10 * 1024 * 1024,  # 10 MB
             backupCount=5,
-            encoding='utf-8'
+            encoding="utf-8",
         )
         handler.setLevel(level or self.log_level)
 
         # Detailed formatter with timestamp, level, module, and message
         formatter = logging.Formatter(
-            '%(asctime)s | %(levelname)-8s | %(name)-25s | %(funcName)-20s | %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            "%(asctime)s | %(levelname)-8s | %(name)-25s | %(funcName)-20s | %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
         handler.setFormatter(formatter)
         return handler
@@ -55,8 +61,8 @@ class LoggerSetup:
 
         # Simpler formatter for console
         formatter = logging.Formatter(
-            '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
         handler.setFormatter(formatter)
         return handler
@@ -97,14 +103,20 @@ class LoggerSetup:
 logger_setup = LoggerSetup()
 
 # Pre-configured loggers for different components
-app_logger = logger_setup.get_logger('app.main', 'app.log')
-auth_logger = logger_setup.get_logger('app.auth', 'auth.log')
-api_logger = logger_setup.get_logger('app.api', 'api.log')
-error_logger = logger_setup.get_logger('app.error', 'error.log')
-security_logger = logger_setup.get_logger('app.security', 'security.log')
+app_logger = logger_setup.get_logger("app.main", "app.log")
+auth_logger = logger_setup.get_logger("app.auth", "auth.log")
+api_logger = logger_setup.get_logger("app.api", "api.log")
+error_logger = logger_setup.get_logger("app.error", "error.log")
+security_logger = logger_setup.get_logger("app.security", "security.log")
 
 
-def log_request(endpoint: str, method: str, status_code: int, duration_ms: float, client_ip: str = None):
+def log_request(
+    endpoint: str,
+    method: str,
+    status_code: int,
+    duration_ms: float,
+    client_ip: str = None,
+):
     """Log API request details"""
     msg = f"{method} {endpoint} - Status: {status_code} - Duration: {duration_ms:.2f}ms"
     if client_ip:
@@ -119,7 +131,9 @@ def log_request(endpoint: str, method: str, status_code: int, duration_ms: float
         api_logger.info(msg)
 
 
-def log_auth_event(event: str, user_email: str = None, success: bool = True, details: str = None):
+def log_auth_event(
+    event: str, user_email: str = None, success: bool = True, details: str = None
+):
     """Log authentication events"""
     level = logging.INFO if success else logging.WARNING
     msg = f"{event}"
@@ -164,9 +178,9 @@ def log_startup():
 
     # Define sensitive keys that should not be logged
     sensitive_keys = {
-        'SECRET_KEY',
-        'DATABASE_URL',  # May contain passwords
-        'REDIS_URL',     # May contain passwords
+        "SECRET_KEY",
+        "DATABASE_URL",  # May contain passwords
+        "REDIS_URL",  # May contain passwords
     }
 
     # Log all non-sensitive configuration

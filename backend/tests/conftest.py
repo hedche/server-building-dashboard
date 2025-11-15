@@ -1,6 +1,7 @@
 """
 Shared test fixtures and configuration
 """
+
 import pytest
 from fastapi.testclient import TestClient
 from typing import Dict, Any
@@ -37,7 +38,7 @@ def mock_user_data() -> Dict[str, Any]:
         "email": "test@example.com",
         "name": "Test User",
         "role": "user",
-        "groups": ["Dashboard-Users"]
+        "groups": ["Dashboard-Users"],
     }
 
 
@@ -51,7 +52,7 @@ def mock_admin_user_data() -> Dict[str, Any]:
         "email": "admin@example.com",
         "name": "Admin User",
         "role": "admin",
-        "groups": ["Dashboard-Admins"]
+        "groups": ["Dashboard-Admins"],
     }
 
 
@@ -107,10 +108,14 @@ def mock_saml_attributes() -> Dict[str, Any]:
     Provides mock SAML attributes for testing
     """
     return {
-        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": ["test@example.com"],
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": [
+            "test@example.com"
+        ],
         "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname": ["Test"],
         "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname": ["User"],
-        "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups": ["Dashboard-Users"]
+        "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups": [
+            "Dashboard-Users"
+        ],
     }
 
 
@@ -127,7 +132,7 @@ def mock_server_data() -> Dict[str, Any]:
         "percent_built": 75,
         "assigned_status": "not assigned",
         "machine_type": "Server",
-        "status": "installing"
+        "status": "installing",
     }
 
 
@@ -146,11 +151,11 @@ def mock_build_status_data() -> Dict[str, Any]:
                 "percent_built": 55,
                 "assigned_status": "not assigned",
                 "machine_type": "Server",
-                "status": "installing"
+                "status": "installing",
             }
         ],
         "dub": [],
-        "dal": []
+        "dal": [],
     }
 
 
@@ -177,6 +182,7 @@ def track_performance():
     Track test execution time for performance testing
     """
     import time
+
     start = time.time()
     yield
     duration = time.time() - start
