@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(./venv/bin/pytest -v --cov=app --cov=main --cov-report=term-missing)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(docker-compose exec:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker restart:*)",
+      "Bash(docker logs:*)"
     ],
     "deny": [],
     "ask": []

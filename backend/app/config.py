@@ -93,18 +93,53 @@ class Settings(BaseSettings):
         """
         Return (saml_settings_dict, idp_metadata_str_or_none).
 
-        - saml_settings_dict: dict suitable for python3-saml (contains "idp_metadata" when present)
+        - saml_settings_dict: dict suitable for python3-saml (contains SP config and "idp_metadata")
         - idp_metadata_str_or_none: raw metadata XML string or None if missing/error
         """
+        # Build SP (Service Provider) configuration
+        saml_settings = {
+            "strict": True,
+            "debug": self.DEBUG,
+            "sp": {
+                "entityId": self.SAML_ENTITY_ID,
+                "assertionConsumerService": {
+                    "url": self.SAML_ACS_URL,
+                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+                },
+                "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+            },
+            "security": {
+                "nameIdEncrypted": False,
+                "authnRequestsSigned": False,
+                "logoutRequestSigned": False,
+                "logoutResponseSigned": False,
+                "signMetadata": False,
+                "wantMessagesSigned": False,
+                "wantAssertionsSigned": False,
+                "wantAssertionsEncrypted": False,
+                "wantNameIdEncrypted": False,
+                "requestedAuthnContext": True,
+            }
+        }
+
+        # Add Single Logout Service if configured
+        if self.SAML_SLS_URL:
+            saml_settings["sp"]["singleLogoutService"] = {
+                "url": self.SAML_SLS_URL,
+                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            }
+
+        # Try to load IDP metadata
         if not os.path.exists(self.SAML_METADATA_PATH):
-            return {}, None
+            return saml_settings, None
+
         try:
             with open(self.SAML_METADATA_PATH, "r", encoding="utf-8") as f:
                 metadata = f.read()
-            saml_settings = {"idp_metadata": metadata}
+            saml_settings["idp_metadata"] = metadata
             return saml_settings, metadata
         except Exception:
-            return {}, None
+            return saml_settings, None
 
 
 @lru_cache()

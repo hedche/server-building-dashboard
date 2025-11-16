@@ -151,26 +151,42 @@ async def saml_callback(request: Request, response: Response):
         # Store session (in production, use Redis or similar)
         saml_auth.store_session(session_token, user_data)
 
-        # Set secure cookie
-        response.set_cookie(
-            key="session_token",
-            value=session_token,
-            httponly=True,
-            secure=settings.ENVIRONMENT == "production",
-            samesite="lax",
-            max_age=settings.SESSION_LIFETIME_SECONDS,
-            domain=settings.COOKIE_DOMAIN,
-        )
-
         log_auth_event(
             "User authenticated", user_email=user_data.get("email"), success=True
         )
 
-        # Redirect to frontend
-        return RedirectResponse(
+        # Create redirect response
+        redirect_response = RedirectResponse(
             url=f"{settings.FRONTEND_URL}/auth/callback",
             status_code=status.HTTP_302_FOUND,
         )
+
+        # Set secure cookie on the redirect response
+        # Use None for domain if COOKIE_DOMAIN is empty to allow cross-port localhost access
+        cookie_domain = settings.COOKIE_DOMAIN if settings.COOKIE_DOMAIN else None
+        is_production = settings.ENVIRONMENT == "production"
+
+        # For cross-origin requests in development (localhost:5173 -> localhost:8000),
+        # we need samesite=none, which REQUIRES secure=true in modern browsers.
+        # Since we're on HTTP in dev, we can't use samesite=none.
+        # Instead, use samesite=lax and rely on CORS + credentials
+        samesite_value = "lax"
+        secure_value = is_production
+
+        redirect_response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=secure_value,
+            samesite=samesite_value,
+            max_age=settings.SESSION_LIFETIME_SECONDS,
+            domain=cookie_domain,
+            path="/",  # Make cookie available for all paths
+        )
+
+        app_logger.info(f"Setting cookie: domain={cookie_domain}, path=/, samesite={samesite_value}, secure={secure_value}, httponly=True")
+
+        return redirect_response
 
     except Exception as e:
         log_error(e, context="SAML callback processing")
