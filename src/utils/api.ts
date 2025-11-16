@@ -2,7 +2,7 @@
  * API utility for handling backend connections with automatic fallback to mock data
  */
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://test-backend.suntrap.workers.dev';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
 
 // Track backend availability
