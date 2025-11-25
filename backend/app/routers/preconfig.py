@@ -76,6 +76,44 @@ def generate_mock_preconfigs() -> List[PreconfigData]:
     ]
 
 
+def generate_mock_pushed_preconfigs() -> List[PreconfigData]:
+    """
+    Generate mock pushed preconfig data
+    Simulates preconfigs that have been pushed to depots
+    """
+    now = datetime.utcnow()
+    return [
+        PreconfigData(
+            id="pushed-001",
+            depot=1,
+            config={
+                "os": "Ubuntu 20.04 LTS",
+                "cpu": "2x Intel Xeon Gold 6248R",
+                "ram": "128GB DDR4",
+                "storage": "4x 1TB NVMe SSD",
+                "raid": "RAID 10",
+                "network": "2x 25Gbps",
+            },
+            created_at=now,
+            pushed_at=now,
+        ),
+        PreconfigData(
+            id="pushed-002",
+            depot=2,
+            config={
+                "os": "Ubuntu 22.04 LTS",
+                "cpu": "2x Intel Xeon Gold 6348",
+                "ram": "512GB DDR4",
+                "storage": "12x 4TB NVMe SSD",
+                "raid": "RAID 10",
+                "network": "2x 100Gbps",
+            },
+            created_at=now,
+            pushed_at=now,
+        ),
+    ]
+
+
 @router.get(
     "/preconfigs",
     response_model=List[PreconfigData],
@@ -148,4 +186,33 @@ async def push_preconfig(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to push preconfig",
+        )
+
+
+@router.get(
+    "/preconfigs/pushed",
+    response_model=List[PreconfigData],
+    summary="Get pushed preconfigs",
+    description="Get preconfigurations that have been pushed to depots",
+)
+async def get_pushed_preconfigs(
+    current_user: User = Depends(get_current_user),
+) -> List[PreconfigData]:
+    """
+    Get pushed preconfigurations
+    Returns list of preconfig records that have been pushed
+    """
+    try:
+        logger.info(f"Pushed preconfigs requested by {current_user.email}")
+
+        # Simulate database query
+        preconfigs = generate_mock_pushed_preconfigs()
+
+        return preconfigs
+
+    except Exception as e:
+        logger.error(f"Error fetching pushed preconfigs: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch pushed preconfigs",
         )

@@ -5,6 +5,19 @@
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
 
+/**
+ * Apply simulated API delay if configured
+ * Simulates slow network or backend response time
+ */
+export const applySimulatedDelay = async (): Promise<void> => {
+  const delaySeconds = parseFloat(import.meta.env.VITE_SIMULATED_API_DELAY_TIME || '0');
+  const delayMs = Math.max(0, delaySeconds * 1000); // Convert to ms, ensure non-negative
+
+  if (delayMs > 0) {
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+};
+
 // Track backend availability
 let backendAvailable: boolean | null = null;
 let lastHealthCheck = 0;
@@ -81,7 +94,9 @@ export const fetchWithFallback = async <T>(
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    await applySimulatedDelay();
+    return data;
   }
 
   // In dev mode, try backend first
@@ -109,7 +124,9 @@ export const fetchWithFallback = async <T>(
       }
       backendAvailable = true;
       lastHealthCheck = Date.now();
-      return await response.json();
+      const data = await response.json();
+      await applySimulatedDelay();
+      return data;
     } else {
       // Backend returned error, fall back to mock
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -123,8 +140,8 @@ export const fetchWithFallback = async <T>(
     backendAvailable = false;
     lastHealthCheck = Date.now();
 
-    // Simulate network delay for realism
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Apply simulated delay
+    await applySimulatedDelay();
     return mockData;
   }
 };

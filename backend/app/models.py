@@ -93,6 +93,7 @@ class PreconfigData(BaseModel):
     depot: int = Field(..., ge=1, le=4)
     config: Dict[str, Any]
     created_at: datetime
+    pushed_at: Optional[datetime] = None  # Add this field
 
     @validator("depot")
     def validate_depot(cls, v):
@@ -100,6 +101,9 @@ class PreconfigData(BaseModel):
         if v not in valid_depots:
             raise ValueError(f"depot must be one of {valid_depots}")
         return v
+
+    class Config:
+        from_attributes = True
 
 
 class PushPreconfigRequest(BaseModel):

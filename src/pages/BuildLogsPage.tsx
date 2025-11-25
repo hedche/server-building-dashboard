@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FileText, RefreshCw, AlertCircle } from 'lucide-react';
 import { useHostnames } from '../hooks/useHostnames';
 import HostnameSearch from '../components/HostnameSearch';
+import { applySimulatedDelay } from '../utils/api';
 
 const BuildLogsPage: React.FC = () => {
   const { hostnames, isLoading: hostnamesLoading, error: hostnamesError, refetch } = useHostnames();
@@ -63,6 +64,9 @@ const BuildLogsPage: React.FC = () => {
         }
         log = await response.text();
       }
+
+      // Apply simulated delay
+      await applySimulatedDelay();
 
       setLogContent(log);
       setTimeout(() => {
