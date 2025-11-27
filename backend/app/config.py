@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Server Building Dashboard"
     ENVIRONMENT: str = "development"
-    DEBUG: bool = False
 
     # Security
     SECRET_KEY: str
@@ -57,6 +56,15 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore",
     )
+
+    @property
+    def DEBUG(self) -> bool:
+        """
+        Derive DEBUG mode from LOG_LEVEL.
+        Returns True when LOG_LEVEL is set to DEBUG, False otherwise.
+        Used for SAML library debug mode and other debug features.
+        """
+        return self.LOG_LEVEL.upper() == "DEBUG"
 
     @field_validator("CORS_ORIGINS", mode="before")
     def _parse_cors_origins(cls, v):
