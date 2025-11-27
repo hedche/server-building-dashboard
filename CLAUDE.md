@@ -331,6 +331,7 @@ See `backend/CLAUDE.md` for detailed backend deployment instructions.
 - **Styling**: Tailwind CSS utility classes
 - **Routing**: React Router v7 with `createBrowserRouter`
 - **State Management**: React Context for auth, local state for components
+- **Login Logo**: Customizable via `VITE_LOGIN_LOGO_PATH` (filename in public/ directory) and `VITE_LOGIN_LOGO_BG_COLOR` (Tailwind class). Defaults to Shield icon with green background. Images auto-crop to circle using `object-cover`. Logo files must be placed in `public/` directory before build.
 
 ### Backend
 

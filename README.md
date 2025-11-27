@@ -57,6 +57,16 @@ VITE_DEV_MODE=true
 - `VITE_APP_NAME`: The name displayed in the application header and login page (defaults to "SAML Portal")
 - `VITE_BACKEND_URL`: The base URL for your backend API
 - `VITE_DEV_MODE`: Set to `true` to bypass SAML authentication for local development
+- `VITE_LOGIN_LOGO_PATH`: (Optional) Filename of logo image in `public/` directory
+  - If not set, displays the default shield icon
+  - Place your logo file in `public/` directory (e.g., `public/logo.png`)
+  - Set value to just the filename (e.g., `VITE_LOGIN_LOGO_PATH=logo.png`)
+  - Supports PNG, JPG, SVG, GIF, WebP formats
+  - Images are automatically cropped to a circle
+  - Recommended: Square images (1:1 aspect ratio) for best results
+- `VITE_LOGIN_LOGO_BG_COLOR`: (Optional) Tailwind color class for logo background
+  - Defaults to `bg-green-600` if not set
+  - Example: `bg-blue-600`, `bg-gray-800`
 
 ### Development Mode / Bypassing SAML Login
 
@@ -109,6 +119,50 @@ Test it out with:
 ```
 docker run -d --restart=unless-stopped -p 8080:8080 --name server-dashboard-prod server-dashboard:prod
 ```
+
+### Customizing the Login Logo
+
+The login page logo can be customized by placing a logo file in the `public/` directory and configuring the environment variable.
+
+**Local Development:**
+
+1. Place your logo file in the `public/` directory:
+   ```bash
+   mkdir -p public
+   cp /path/to/your/logo.png public/logo.png
+   ```
+
+2. Update your `.env` file:
+   ```bash
+   VITE_LOGIN_LOGO_PATH=logo.png
+   VITE_LOGIN_LOGO_BG_COLOR=bg-blue-700
+   ```
+
+3. Restart the dev server:
+   ```bash
+   npm run dev
+   ```
+
+**Docker Build:**
+
+1. Place your logo in `public/` directory before building
+2. Build with environment variables:
+   ```bash
+   docker build \
+     --build-arg VITE_BACKEND_URL=https://api.example.com \
+     --build-arg VITE_DEV_MODE=false \
+     --build-arg VITE_LOGIN_LOGO_PATH=logo.png \
+     --build-arg VITE_LOGIN_LOGO_BG_COLOR=bg-blue-700 \
+     -t server-dashboard:prod .
+   ```
+
+**Troubleshooting:**
+- If your custom logo doesn't appear, check the browser console for errors
+- Ensure the logo file exists in the `public/` directory
+- Verify the filename matches exactly (case-sensitive)
+- If the image fails to load, the default shield icon displays automatically
+- Square images (1:1 aspect ratio) work best as they fill the circle completely
+- The logo is baked into the build - you cannot change it at runtime
 
 ## Requirements for Backend API
 

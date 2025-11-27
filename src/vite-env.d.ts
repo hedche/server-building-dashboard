@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_BACKEND_URL?: string
   readonly VITE_DEV_MODE?: string
   readonly VITE_SIMULATED_API_DELAY_TIME?: string
+  readonly VITE_LOGIN_LOGO_PATH?: string
+  readonly VITE_LOGIN_LOGO_BG_COLOR?: string
 }
 
 interface ImportMeta {
