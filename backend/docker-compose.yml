@@ -14,7 +14,7 @@ services:
       # Mount .env file (don't commit actual .env to git)
       - ./.env:/app/.env:ro
     environment:
-      - ENVIRONMENT=production
+      - ENVIRONMENT=prod
     restart: unless-stopped
     networks:
       - backend-network

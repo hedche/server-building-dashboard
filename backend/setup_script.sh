@@ -72,8 +72,7 @@ if [ ! -f ".env" ]; then
     echo "✓ .env file created with generated SECRET_KEY"
     echo ""
     echo "⚠️  IMPORTANT: Review and update .env file with your configuration:"
-    echo "   - SAML_ENTITY_ID"
-    echo "   - SAML_ACS_URL"
+    echo "   - SAML_ACS_URL (Entity ID is auto-derived from this)"
     echo "   - CORS_ORIGINS"
     echo "   - FRONTEND_URL"
 else

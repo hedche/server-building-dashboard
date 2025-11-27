@@ -149,16 +149,19 @@ Microsoft Azure AD/ADFS attributes:
 ### Essential .env Variables
 ```bash
 SECRET_KEY=<generate with: python -c "import secrets; print(secrets.token_urlsafe(32))">
-SAML_ENTITY_ID=https://your-backend-domain.com
 SAML_ACS_URL=https://your-backend-domain.com/api/auth/callback
 CORS_ORIGINS=http://localhost:5173
 FRONTEND_URL=http://localhost:5173
 ```
 
+Note: Entity ID is automatically derived from `SAML_ACS_URL` (the origin: scheme + host + port).
+
 ### SAML Setup
 1. Obtain IDP metadata XML from Azure AD or ADFS
 2. Place at `saml_metadata/idp_metadata.xml`
-3. Register SP with IDP using entity ID and ACS URL from .env
+3. Register SP with IDP using:
+   - Entity ID: Auto-derived from ACS URL origin (e.g., `https://your-backend-domain.com`)
+   - ACS URL: Full callback URL from .env
 4. Ensure IDP sends required attributes (email minimum)
 
 ## Common Tasks

@@ -7,6 +7,7 @@ import os
 import json
 from typing import List, Optional, Union
 from functools import lru_cache
+from urllib.parse import urlparse
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,7 +18,7 @@ class Settings(BaseSettings):
 
     # Application
     APP_NAME: str = "Server Building Dashboard"
-    ENVIRONMENT: str = "development"
+    ENVIRONMENT: str = "dev"
 
     # Security
     SECRET_KEY: str
@@ -35,9 +36,7 @@ class Settings(BaseSettings):
 
     # SAML2 Configuration
     SAML_METADATA_PATH: str = "./saml_metadata/idp_metadata.xml"
-    SAML_ENTITY_ID: str
     SAML_ACS_URL: str  # Assertion Consumer Service URL
-    SAML_SLS_URL: Optional[str] = None  # Single Logout Service URL (optional)
 
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
@@ -65,6 +64,16 @@ class Settings(BaseSettings):
         Used for SAML library debug mode and other debug features.
         """
         return self.LOG_LEVEL.upper() == "DEBUG"
+
+    @property
+    def SAML_ENTITY_ID(self) -> str:
+        """
+        Derive SAML Entity ID from SAML_ACS_URL.
+        Entity ID is the origin (scheme + host + port) of the ACS URL.
+        Example: https://api.example.com/api/auth/callback -> https://api.example.com
+        """
+        parsed = urlparse(self.SAML_ACS_URL)
+        return f"{parsed.scheme}://{parsed.netloc}"
 
     @field_validator("CORS_ORIGINS", mode="before")
     def _parse_cors_origins(cls, v):
@@ -129,13 +138,6 @@ class Settings(BaseSettings):
                 "requestedAuthnContext": True,
             },
         }
-
-        # Add Single Logout Service if configured
-        if self.SAML_SLS_URL:
-            saml_settings["sp"]["singleLogoutService"] = {
-                "url": self.SAML_SLS_URL,
-                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
-            }
 
         # Try to load IDP metadata
         if not os.path.exists(self.SAML_METADATA_PATH):

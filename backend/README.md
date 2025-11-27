@@ -62,8 +62,8 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 Update these critical settings in `.env`:
 - `SECRET_KEY`: Use the generated secret key above
-- `SAML_ENTITY_ID`: Your backend domain (e.g., `https://api.yourdomain.com`)
 - `SAML_ACS_URL`: Your callback URL (e.g., `https://api.yourdomain.com/api/auth/callback`)
+  - Entity ID is automatically derived from this URL (the origin: scheme + host + port)
 - `CORS_ORIGINS`: Your frontend URL
 - `FRONTEND_URL`: Your frontend application URL
 
@@ -156,7 +156,7 @@ docker run -p 8000:8000 \
   -v $(pwd)/main.py:/app/main.py:ro \
   -v $(pwd)/.env.dev:/app/.env:ro \
   -v $(pwd)/saml_metadata:/app/saml_metadata:ro \
-  -e ENVIRONMENT=development \
+  -e ENVIRONMENT=dev \
   server-dashboard-backend:dev \
   uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -227,10 +227,9 @@ docker run -p 8000:8000 \
 | Variable | Description | Required | Default |
 |----------|-------------|----------|---------|
 | `SECRET_KEY` | Secret key for session signing | Yes | - |
-| `ENVIRONMENT` | Environment (development/production) | No | development |
+| `ENVIRONMENT` | Environment (dev/prod) | No | dev |
 | `SAML_METADATA_PATH` | Path to IDP metadata XML | Yes | ./saml_metadata/idp_metadata.xml |
-| `SAML_ENTITY_ID` | Service Provider entity ID | Yes | - |
-| `SAML_ACS_URL` | Assertion Consumer Service URL | Yes | - |
+| `SAML_ACS_URL` | Assertion Consumer Service URL (Entity ID auto-derived) | Yes | - |
 | `CORS_ORIGINS` | Allowed CORS origins (comma-separated) | No | http://localhost:5173 |
 | `FRONTEND_URL` | Frontend application URL | Yes | http://localhost:5173 |
 | `SESSION_LIFETIME_SECONDS` | Session lifetime in seconds | No | 28800 (8 hours) |
@@ -255,7 +254,7 @@ The backend uses the `python3-saml` library. SAML settings are configured in `ap
 
 ### Checklist
 
-- [ ] Set `ENVIRONMENT=production` in `.env`
+- [ ] Set `ENVIRONMENT=prod` in `.env`
 - [ ] Generate strong `SECRET_KEY`
 - [ ] Configure proper `CORS_ORIGINS`
 - [ ] Use HTTPS for all URLs
@@ -273,8 +272,8 @@ The backend uses the `python3-saml` library. SAML settings are configured in `ap
 
 Your IDP (Microsoft Azure AD/ADFS) needs the following Service Provider information:
 
-- **Entity ID**: Value from `SAML_ENTITY_ID`
-- **ACS URL**: Value from `SAML_ACS_URL`
+- **Entity ID**: Auto-derived from `SAML_ACS_URL` (origin only, e.g., `https://api.yourdomain.com`)
+- **ACS URL**: Value from `SAML_ACS_URL` (e.g., `https://api.yourdomain.com/api/auth/callback`)
 - **Binding**: HTTP-POST
 - **NameID Format**: Email address
 
@@ -515,7 +514,7 @@ safety check
 
 2. **"SAML authentication failed"**
    - Verify IDP metadata is current
-   - Check `SAML_ENTITY_ID` matches IDP configuration
+   - Check Entity ID (derived from `SAML_ACS_URL` origin) matches IDP configuration
    - Ensure `SAML_ACS_URL` is correct and accessible
    - Review SAML response in logs
 

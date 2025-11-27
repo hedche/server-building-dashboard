@@ -17,7 +17,7 @@ services:
       # Mount SAML metadata directory (optional for dev)
       - ./saml_metadata:/app/saml_metadata:ro
     environment:
-      - ENVIRONMENT=development
+      - ENVIRONMENT=dev
       - PYTHONUNBUFFERED=1
     # Override CMD to use uvicorn with reload for development
     command: ["uvicorn", "main:app", "--reload", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]

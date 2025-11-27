@@ -40,8 +40,8 @@ app = FastAPI(
     version="1.0.0",
     description="API for server build monitoring and management",
     lifespan=lifespan,
-    docs_url="/api/docs" if settings.ENVIRONMENT == "development" else None,
-    redoc_url="/api/redoc" if settings.ENVIRONMENT == "development" else None,
+    docs_url="/api/docs" if settings.ENVIRONMENT == "dev" else None,
+    redoc_url="/api/redoc" if settings.ENVIRONMENT == "dev" else None,
 )
 
 
@@ -164,7 +164,7 @@ async def saml_callback(request: Request, response: Response):
         # Set secure cookie on the redirect response
         # Use None for domain if COOKIE_DOMAIN is empty to allow cross-port localhost access
         cookie_domain = settings.COOKIE_DOMAIN if settings.COOKIE_DOMAIN else None
-        is_production = settings.ENVIRONMENT == "production"
+        is_production = settings.ENVIRONMENT == "prod"
 
         # For cross-origin requests in development (localhost:5173 -> localhost:8000),
         # we need samesite=none, which REQUIRES secure=true in modern browsers.
@@ -223,7 +223,7 @@ async def logout(
         path="/",
         domain=settings.COOKIE_DOMAIN,
         httponly=True,
-        secure=settings.ENVIRONMENT == "production",
+        secure=settings.ENVIRONMENT == "prod",
         samesite="lax",
     )
 
@@ -250,6 +250,6 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=settings.ENVIRONMENT == "development",
+        reload=settings.ENVIRONMENT == "dev",
         log_level="info",
     )
