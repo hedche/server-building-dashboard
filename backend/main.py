@@ -184,7 +184,9 @@ async def saml_callback(request: Request, response: Response):
             path="/",  # Make cookie available for all paths
         )
 
-        app_logger.info(f"Setting cookie: domain={cookie_domain}, path=/, samesite={samesite_value}, secure={secure_value}, httponly=True")
+        app_logger.info(
+            f"Setting cookie: domain={cookie_domain}, path=/, samesite={samesite_value}, secure={secure_value}, httponly=True"
+        )
 
         return redirect_response
 

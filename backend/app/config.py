@@ -104,7 +104,7 @@ class Settings(BaseSettings):
                 "entityId": self.SAML_ENTITY_ID,
                 "assertionConsumerService": {
                     "url": self.SAML_ACS_URL,
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
                 },
                 "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
             },
@@ -119,14 +119,14 @@ class Settings(BaseSettings):
                 "wantAssertionsEncrypted": False,
                 "wantNameIdEncrypted": False,
                 "requestedAuthnContext": True,
-            }
+            },
         }
 
         # Add Single Logout Service if configured
         if self.SAML_SLS_URL:
             saml_settings["sp"]["singleLogoutService"] = {
                 "url": self.SAML_SLS_URL,
-                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
             }
 
         # Try to load IDP metadata

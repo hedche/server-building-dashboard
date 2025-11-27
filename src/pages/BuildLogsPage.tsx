@@ -1,15 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FileText, RefreshCw, AlertCircle } from 'lucide-react';
 import { useHostnames } from '../hooks/useHostnames';
+import { useBuildLog } from '../hooks/useBuildLog';
 import HostnameSearch from '../components/HostnameSearch';
-import { applySimulatedDelay } from '../utils/api';
 
 const BuildLogsPage: React.FC = () => {
   const { hostnames, isLoading: hostnamesLoading, error: hostnamesError, refetch } = useHostnames();
+  const { log: logContent, isLoading: logLoading, error: logError, fetchLog } = useBuildLog();
   const [selectedHostname, setSelectedHostname] = useState<string | null>(null);
-  const [logContent, setLogContent] = useState<string>('');
-  const [logLoading, setLogLoading] = useState(false);
-  const [logError, setLogError] = useState<string | null>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -19,71 +17,16 @@ const BuildLogsPage: React.FC = () => {
     }
   }, [hostnamesLoading, hostnames.length]);
 
-  const generateMockLog = (): string => {
-    const lines: string[] = [];
-    const now = new Date();
-
-    for (let i = 0; i < 200; i++) {
-      const timestamp = new Date(now.getTime() - (200 - i) * 1000).toISOString();
-      const logTypes = ['INFO', 'DEBUG', 'WARN', 'ERROR', 'SUCCESS'];
-      const logType = logTypes[Math.floor(Math.random() * logTypes.length)];
-      const messages = [
-        'Compiling source files',
-        'Running tests',
-        'Building artifacts',
-        'Deploying to servers',
-        'Health check passed',
-        'Optimization complete',
-        'Cache invalidated',
-        'Dependencies resolved',
-        'Docker image built',
-        'Pushing to registry',
-      ];
-      const message = messages[Math.floor(Math.random() * messages.length)];
-
-      lines.push(`[${timestamp}] [${logType}] ${message}`);
+  // Auto-scroll to bottom when log content loads
+  useEffect(() => {
+    if (logContent && logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
-
-    return lines.join('\n');
-  };
-
-  const fetchBuildLog = async (hostname: string) => {
-    setLogLoading(true);
-    setLogError(null);
-    setLogContent('');
-
-    try {
-      let log: string;
-
-      if (import.meta.env.DEV) {
-        log = generateMockLog();
-      } else {
-        const response = await fetch(`/build-log/${hostname}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch log: ${response.statusText}`);
-        }
-        log = await response.text();
-      }
-
-      // Apply simulated delay
-      await applySimulatedDelay();
-
-      setLogContent(log);
-      setTimeout(() => {
-        if (logContainerRef.current) {
-          logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-        }
-      }, 0);
-    } catch (err) {
-      setLogError(err instanceof Error ? err.message : 'Failed to fetch log');
-    } finally {
-      setLogLoading(false);
-    }
-  };
+  }, [logContent]);
 
   const handleHostnameSelect = (hostname: string) => {
     setSelectedHostname(hostname);
-    fetchBuildLog(hostname);
+    fetchLog(hostname);
   };
 
   return (
