@@ -99,7 +99,7 @@ app.include_router(server.router, prefix="/api", tags=["server"])
 
 
 # Health check endpoint
-@app.get("/health", tags=["health"])
+@app.get("/api/health", tags=["health"])
 async def health_check():
     """Health check endpoint for monitoring"""
     return {
@@ -110,7 +110,7 @@ async def health_check():
 
 
 # Authentication endpoints
-@app.get("/saml/login", tags=["auth"])
+@app.get("/api/saml/login", tags=["auth"])
 async def saml_login(request: Request):
     """Initiate SAML login"""
     try:
@@ -128,7 +128,7 @@ async def saml_login(request: Request):
         )
 
 
-@app.post("/auth/callback", tags=["auth"])
+@app.post("/api/auth/callback", tags=["auth"])
 async def saml_callback(request: Request, response: Response):
     """Handle SAML callback"""
     try:
@@ -199,13 +199,13 @@ async def saml_callback(request: Request, response: Response):
         )
 
 
-@app.get("/me", tags=["auth"])
+@app.get("/api/me", tags=["auth"])
 async def get_me(current_user: User = Depends(get_current_user)):
     """Get current user information"""
     return current_user
 
 
-@app.post("/logout", tags=["auth"])
+@app.post("/api/logout", tags=["auth"])
 async def logout(
     request: Request, response: Response, current_user: User = Depends(get_current_user)
 ):
@@ -233,7 +233,7 @@ async def logout(
 
 
 # Root endpoint
-@app.get("/", tags=["root"])
+@app.get("/api", tags=["root"])
 async def root():
     """Root endpoint"""
     return {

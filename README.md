@@ -116,7 +116,7 @@ The frontend expects the following API endpoints and JSON response formats:
 
 ### Authentication Endpoints
 
-#### `GET /me`
+#### `GET /api/me`
 Get current user information
 ```json
 {
@@ -127,10 +127,10 @@ Get current user information
 }
 ```
 
-#### `GET /saml/login`
+#### `GET /api/saml/login`
 Redirect endpoint for SAML authentication (no JSON response)
 
-#### `POST /logout`
+#### `POST /api/logout`
 Logout endpoint (no JSON response expected)
 
 ### Build Status Endpoints
@@ -282,7 +282,7 @@ All endpoints should return appropriate HTTP status codes and error messages:
 
 ### Authentication
 
-All API endpoints (except `/saml/login`) should:
+All API endpoints (except `/api/saml/login`) should:
 - Accept cookies for session management
 - Return 401 for unauthenticated requests
 - Support CORS with credentials

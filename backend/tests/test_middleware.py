@@ -11,7 +11,7 @@ class TestSecurityHeaders:
 
     def test_security_headers_present(self, client):
         """Test that security headers are added to all responses"""
-        response = client.get("/health")
+        response = client.get("/api/health")
 
         # Verify all security headers are present
         assert "X-Content-Type-Options" in response.headers
@@ -35,7 +35,7 @@ class TestSecurityHeaders:
 
     def test_csp_header_configuration(self, client):
         """Test Content Security Policy header is properly configured"""
-        response = client.get("/health")
+        response = client.get("/api/health")
 
         csp = response.headers["Content-Security-Policy"]
 
@@ -59,7 +59,7 @@ class TestRateLimiting:
 
     def test_rate_limit_headers_present(self, client):
         """Test that rate limit headers are added to responses"""
-        response = client.get("/")
+        response = client.get("/api")
 
         assert "X-RateLimit-Limit" in response.headers
         assert "X-RateLimit-Remaining" in response.headers
@@ -82,11 +82,11 @@ class TestRateLimiting:
         """Test that health endpoint bypasses rate limiting"""
         # Make many requests to health endpoint
         for _ in range(10):
-            response = client.get("/health")
+            response = client.get("/api/health")
             assert response.status_code == 200
 
         # Health endpoint should not have rate limit headers
-        response = client.get("/health")
+        response = client.get("/api/health")
         # Note: Based on the middleware code, health endpoint skips rate limiting
         # but other middleware might still run, so we just check it returns 200
         assert response.status_code == 200
@@ -95,7 +95,7 @@ class TestRateLimiting:
     def test_rate_limit_enforcement(self, client):
         """Test that rate limit is enforced after burst limit"""
         # Get the burst limit from first response
-        response = client.get("/")
+        response = client.get("/api")
         burst_limit = int(response.headers["X-RateLimit-Limit"])
 
         # Make requests up to the burst limit
@@ -103,7 +103,7 @@ class TestRateLimiting:
         # For development, we're using a high limit (100+)
         # This test validates the mechanism works but may not hit the limit
         for i in range(min(burst_limit + 5, 20)):
-            response = client.get("/")
+            response = client.get("/api")
 
             # If we hit rate limit, verify the response
             if response.status_code == 429:
@@ -121,7 +121,7 @@ class TestRequestLogging:
 
     def test_process_time_header(self, client):
         """Test that X-Process-Time header is added"""
-        response = client.get("/health")
+        response = client.get("/api/health")
 
         # Note: The custom logging middleware in main.py doesn't add X-Process-Time
         # but the one in middleware.py does. Since main.py uses custom middleware,

@@ -196,8 +196,8 @@ class TestAuthEndpoints:
     def test_me_endpoint_authenticated(
         self, client, authenticated_user, mock_user_data
     ):
-        """Test /me endpoint returns user data when authenticated"""
-        response = client.get("/me")
+        """Test /api/me endpoint returns user data when authenticated"""
+        response = client.get("/api/me")
 
         assert response.status_code == 200
         data = response.json()
@@ -207,13 +207,13 @@ class TestAuthEndpoints:
         assert data["role"] == mock_user_data["role"]
 
     def test_me_endpoint_unauthenticated(self, client):
-        """Test /me endpoint requires authentication"""
-        response = client.get("/me")
+        """Test /api/me endpoint requires authentication"""
+        response = client.get("/api/me")
         assert response.status_code == 401
 
     def test_logout_endpoint_authenticated(self, client, authenticated_user):
         """Test logout endpoint clears session"""
-        response = client.post("/logout")
+        response = client.post("/api/logout")
 
         assert response.status_code == 200
         data = response.json()
@@ -226,5 +226,5 @@ class TestAuthEndpoints:
 
     def test_logout_endpoint_unauthenticated(self, client):
         """Test logout endpoint requires authentication"""
-        response = client.post("/logout")
+        response = client.post("/api/logout")
         assert response.status_code == 401

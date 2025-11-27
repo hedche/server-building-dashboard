@@ -12,7 +12,7 @@ class TestHealthEndpoint:
 
     def test_health_check_success(self, client):
         """Test health check returns success"""
-        response = client.get("/health")
+        response = client.get("/api/health")
 
         assert response.status_code == 200
         data = response.json()
@@ -26,7 +26,7 @@ class TestHealthEndpoint:
 
     def test_health_check_no_auth_required(self, client):
         """Test health check doesn't require authentication"""
-        response = client.get("/health")
+        response = client.get("/api/health")
         assert response.status_code == 200
 
 
@@ -36,7 +36,7 @@ class TestRootEndpoint:
 
     def test_root_endpoint_success(self, client):
         """Test root endpoint returns API info"""
-        response = client.get("/")
+        response = client.get("/api")
 
         assert response.status_code == 200
         data = response.json()
@@ -47,5 +47,5 @@ class TestRootEndpoint:
 
     def test_root_endpoint_no_auth_required(self, client):
         """Test root endpoint doesn't require authentication"""
-        response = client.get("/")
+        response = client.get("/api")
         assert response.status_code == 200

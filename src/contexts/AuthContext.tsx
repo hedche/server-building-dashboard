@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Try backend first, fall back to mock user in dev mode if unreachable
       const userData = await fetchWithFallback<User>(
-        '/me',
+        '/api/me',
         {
           credentials: 'include',
         },
@@ -48,12 +48,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = () => {
-    window.location.href = `${BACKEND_URL}/saml/login`;
+    window.location.href = `${BACKEND_URL}/api/saml/login`;
   };
 
   const logout = async () => {
     try {
-      await fetch(`${BACKEND_URL}/logout`, {
+      await fetch(`${BACKEND_URL}/api/logout`, {
         method: 'POST',
         credentials: 'include',
       });

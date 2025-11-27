@@ -100,8 +100,8 @@ backend/
 ### Key Components
 
 **Authentication Flow** (main.py:80-158, app/auth.py):
-1. `/saml/login` - Initiates SAML auth request, redirects to IDP
-2. `/auth/callback` - Processes SAML response, creates session, sets HTTP-only cookie
+1. `/api/saml/login` - Initiates SAML auth request, redirects to IDP
+2. `/api/auth/callback` - Processes SAML response, creates session, sets HTTP-only cookie
 3. `get_current_user()` dependency - Validates session from cookie for protected endpoints
 4. Session storage is in-memory (dict) - **must use Redis in production**
 
@@ -150,7 +150,7 @@ Microsoft Azure AD/ADFS attributes:
 ```bash
 SECRET_KEY=<generate with: python -c "import secrets; print(secrets.token_urlsafe(32))">
 SAML_ENTITY_ID=https://your-backend-domain.com
-SAML_ACS_URL=https://your-backend-domain.com/auth/callback
+SAML_ACS_URL=https://your-backend-domain.com/api/auth/callback
 CORS_ORIGINS=http://localhost:5173
 FRONTEND_URL=http://localhost:5173
 ```
@@ -188,9 +188,9 @@ FRONTEND_URL=http://localhost:5173
 
 ## API Endpoints
 
-All endpoints except `/saml/login`, `/auth/callback`, `/health`, and root require authentication.
+All endpoints except `/api/saml/login`, `/api/auth/callback`, `/api/health`, and `/api` require authentication.
 
-**Auth**: `/saml/login`, `/auth/callback`, `/me`, `/logout`
+**Auth**: `/api/saml/login`, `/api/auth/callback`, `/api/me`, `/api/logout`
 **Build**: `/api/build-status`, `/api/build-history/{date}`
 **Server**: `/api/server-details?hostname={hostname}`
 **Assignment**: `/api/assign`

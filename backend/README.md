@@ -63,7 +63,7 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 Update these critical settings in `.env`:
 - `SECRET_KEY`: Use the generated secret key above
 - `SAML_ENTITY_ID`: Your backend domain (e.g., `https://api.yourdomain.com`)
-- `SAML_ACS_URL`: Your callback URL (e.g., `https://api.yourdomain.com/auth/callback`)
+- `SAML_ACS_URL`: Your callback URL (e.g., `https://api.yourdomain.com/api/auth/callback`)
 - `CORS_ORIGINS`: Your frontend URL
 - `FRONTEND_URL`: Your frontend application URL
 
@@ -87,7 +87,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 The API will be available at `http://localhost:8000`
 - API Documentation: `http://localhost:8000/api/docs`
-- Health Check: `http://localhost:8000/health`
+- Health Check: `http://localhost:8000/api/health`
 
 ## Docker Deployment
 
@@ -122,7 +122,7 @@ docker-compose -f docker-compose.dev.yml up
 
 The API will be available at `http://localhost:8000`
 - API Documentation: `http://localhost:8000/api/docs`
-- Health Check: `http://localhost:8000/health`
+- Health Check: `http://localhost:8000/api/health`
 
 ### Production Deployment
 
@@ -173,10 +173,10 @@ docker run -p 8000:8000 \
 ## API Endpoints
 
 ### Authentication
-- `GET /saml/login` - Initiate SAML login
-- `POST /auth/callback` - SAML callback handler
-- `GET /me` - Get current user info
-- `POST /logout` - Logout
+- `GET /api/saml/login` - Initiate SAML login
+- `POST /api/auth/callback` - SAML callback handler
+- `GET /api/me` - Get current user info
+- `POST /api/logout` - Logout
 
 ### Build Status
 - `GET /api/build-status` - Get current build status
@@ -191,7 +191,7 @@ docker run -p 8000:8000 \
 - `POST /api/push-preconfig` - Push preconfig to depot
 
 ### Health
-- `GET /health` - Health check endpoint
+- `GET /api/health` - Health check endpoint
 
 ## Security Features
 
@@ -280,7 +280,7 @@ Your IDP (Microsoft Azure AD/ADFS) needs the following Service Provider informat
 
 You may also need to provide SP metadata. Generate it by accessing:
 ```
-https://your-backend-domain.com/saml/metadata
+https://your-backend-domain.com/api/saml/metadata
 ```
 (Note: This endpoint would need to be implemented if required)
 
@@ -372,7 +372,7 @@ sudo chmod 777 /var/log/server-building-dashboard
 ### Health Check
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8000/api/health
 ```
 
 Response:
