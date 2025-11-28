@@ -61,11 +61,6 @@ const LoginPage: React.FC = () => {
               <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
             </span>
           </button>
-          
-          <div className="mt-4 text-center text-xs text-gray-500 font-mono">
-            This application uses SAML2 authentication.<br />
-            You will be redirected to your identity provider.
-          </div>
         </div>
         
         {DEV_MODE && (
