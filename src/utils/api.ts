@@ -166,7 +166,7 @@ export const fetchTextWithFallback = async (
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw response; // Throw Response object so caller can check status
     }
 
     const data = await response.text();
@@ -203,7 +203,7 @@ export const fetchTextWithFallback = async (
       return data;
     } else {
       // Backend returned error, fall back to mock
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw response; // Throw Response object so caller can check status
     }
   } catch (error) {
     // Backend unreachable, use mock data

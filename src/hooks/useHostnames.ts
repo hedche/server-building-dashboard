@@ -43,7 +43,9 @@ export const useHostnames = () => {
 
       setHostnames(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch hostnames');
+      // Log the detailed error to console for debugging
+      console.error('Failed to fetch hostnames:', err);
+      setError('Unable to fetch hostname list from backend');
     } finally {
       setIsLoading(false);
     }

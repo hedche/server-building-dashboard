@@ -198,7 +198,7 @@ const HostnameSearch = forwardRef<HTMLInputElement, HostnameSearchProps>(({ host
         </div>
       )}
       
-      {showResults && debouncedSearchTerm && filteredHostnames.length === 0 && (
+      {showResults && debouncedSearchTerm && filteredHostnames.length === 0 && hostnames.length > 0 && (
         <div className="absolute z-10 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg">
           <div className="px-3 py-2 text-gray-400 text-sm font-mono">
             No hostnames found matching "{debouncedSearchTerm}"

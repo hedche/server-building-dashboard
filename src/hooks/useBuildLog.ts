@@ -54,7 +54,7 @@ export const useBuildLog = () => {
     } catch (err) {
       if (err instanceof Response) {
         if (err.status === 404) {
-          setError('Build log not found for this hostname');
+          setError(`Build log for '${hostname}' not found!`);
         } else if (err.status >= 500) {
           setError('Server error loading build log');
         } else {
