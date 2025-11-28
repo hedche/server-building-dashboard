@@ -46,13 +46,23 @@ export const useBuildLog = () => {
 
     try {
       const logData = await fetchTextWithFallback(
-        `/build-log/${hostname}`,
+        `/api/build-logs/${hostname}`,
         {},
         mockBuildLog
       );
       setLog(logData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch log');
+      if (err instanceof Response) {
+        if (err.status === 404) {
+          setError('Build log not found for this hostname');
+        } else if (err.status >= 500) {
+          setError('Server error loading build log');
+        } else {
+          setError('Failed to fetch log');
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to fetch log');
+      }
     } finally {
       setIsLoading(false);
     }

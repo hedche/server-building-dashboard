@@ -57,15 +57,25 @@ const BuildLogsPage: React.FC = () => {
       )}
 
       {hostnamesError && (
-        <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
+        <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4">
           <div className="flex items-center space-x-2">
-            <AlertCircle size={16} className="text-red-400" />
-            <span className="text-red-400 font-mono text-sm">Error: {hostnamesError}</span>
+            <AlertCircle size={16} className="text-yellow-400" />
+            <div>
+              <span className="text-yellow-400 font-mono text-sm font-semibold">
+                Could not load hostname suggestions
+              </span>
+              <p className="text-yellow-300 text-xs mt-1">
+                {hostnamesError}
+              </p>
+              <p className="text-gray-400 text-xs mt-2">
+                You can still search by typing a hostname and clicking Search.
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {!hostnamesLoading && !hostnamesError && hostnames.length > 0 && (
+      {!hostnamesLoading && (
         <div className="space-y-6">
           <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
             <h2 className="text-lg font-semibold text-white font-mono mb-4">Search Build Logs</h2>
@@ -74,10 +84,14 @@ const BuildLogsPage: React.FC = () => {
                 ref={searchInputRef}
                 hostnames={hostnames}
                 onHostnameSelect={handleHostnameSelect}
+                onManualSearch={handleHostnameSelect}
+                isSearching={logLoading}
               />
             </div>
             <p className="text-gray-400 text-sm font-mono mt-2">
-              Search from {hostnames.length.toLocaleString()} available hostnames
+              {hostnames.length > 0
+                ? `Search from ${hostnames.length.toLocaleString()} available hostnames`
+                : 'Enter a hostname to search for build logs'}
             </p>
           </div>
 
@@ -91,10 +105,20 @@ const BuildLogsPage: React.FC = () => {
           )}
 
           {logError && (
-            <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
+            <div className="bg-orange-900/20 border border-orange-700 rounded-lg p-4">
               <div className="flex items-center space-x-2">
-                <AlertCircle size={16} className="text-red-400" />
-                <span className="text-red-400 font-mono text-sm">Error: {logError}</span>
+                <AlertCircle size={16} className="text-orange-400" />
+                <div>
+                  <span className="text-orange-400 font-mono text-sm font-semibold">
+                    {logError.includes('not found') ? 'Build log not found' : 'Error loading build log'}
+                  </span>
+                  <p className="text-orange-300 text-sm mt-1">{logError}</p>
+                  {logError.includes('not found') && (
+                    <p className="text-gray-400 text-xs mt-2">
+                      Make sure the hostname is correct and the build log exists.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}

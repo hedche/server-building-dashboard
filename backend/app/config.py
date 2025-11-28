@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_DIR: str = "/var/log/server-building-dashboard"
 
+    # Build Logs
+    BUILD_LOGS_DIR: str = "./build_logs"
+
     # Database (optional)
     DATABASE_URL: Optional[str] = None
 

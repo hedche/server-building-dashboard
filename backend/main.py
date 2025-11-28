@@ -14,7 +14,7 @@ import time
 from app.config import settings
 from app.auth import saml_auth, get_current_user
 from app.models import User
-from app.routers import build, preconfig, assign, server
+from app.routers import build, preconfig, assign, server, buildlogs
 from app.middleware import SecurityHeadersMiddleware, RateLimitMiddleware
 from app.logger import (
     app_logger,
@@ -96,6 +96,7 @@ app.include_router(build.router, prefix="/api", tags=["build"])
 app.include_router(preconfig.router, prefix="/api", tags=["preconfig"])
 app.include_router(assign.router, prefix="/api", tags=["assign"])
 app.include_router(server.router, prefix="/api", tags=["server"])
+app.include_router(buildlogs.router, prefix="/api", tags=["buildlogs"])
 
 
 # Health check endpoint
