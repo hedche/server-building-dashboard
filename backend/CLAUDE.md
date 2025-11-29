@@ -29,6 +29,8 @@ gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
 ```
 
 ### Testing
+
+#### Local Testing (with venv)
 ```bash
 # Install test dependencies
 pip install -r requirements.txt
@@ -51,6 +53,41 @@ pytest tests/test_models.py
 # Run a specific test
 pytest tests/test_models.py::TestUser::test_user_creation_valid
 ```
+
+#### Docker Testing (recommended)
+```bash
+# Build the Docker image first (if not already built)
+docker build -t server-dashboard-backend-test .
+
+# Run all tests in Docker container (mounts tests, .env, and saml_metadata)
+docker run --rm \
+  -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
+  -v "$(pwd)/.env.example:/app/.env:ro" \
+  server-dashboard-backend-test:latest \
+  pytest -v --cov=app --cov=main --cov-report=term-missing
+
+# Run specific test file in Docker
+docker run --rm \
+  -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
+  -v "$(pwd)/.env.example:/app/.env:ro" \
+  server-dashboard-backend-test:latest \
+  pytest tests/test_api_buildlogs.py -v
+
+# Run specific test in Docker
+docker run --rm \
+  -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
+  -v "$(pwd)/.env.example:/app/.env:ro" \
+  server-dashboard-backend-test:latest \
+  pytest tests/test_api_buildlogs.py::test_custom_hostname_pattern -v
+```
+
+**Note**: Docker testing requires:
+- Tests directory mounted (contains test files)
+- SAML metadata mounted (required for app initialization)
+- .env file mounted (.env.example works for tests)
 
 ### Code Quality
 ```bash
@@ -163,6 +200,31 @@ Note: Entity ID is automatically derived from `SAML_ACS_URL` (the origin: scheme
    - Entity ID: Auto-derived from ACS URL origin (e.g., `https://your-backend-domain.com`)
    - ACS URL: Full callback URL from .env
 4. Ensure IDP sends required attributes (email minimum)
+
+### Hostname Validation Configuration
+
+The `HOSTNAME_PATTERN` environment variable controls which hostname formats are accepted by the build logs API:
+
+```bash
+# Default pattern (flexible - recommended for most deployments)
+HOSTNAME_PATTERN=^[a-zA-Z0-9._-]+$
+
+# Strict region-based format
+HOSTNAME_PATTERN=^[a-z]{3}-srv-[0-9]{3}$  # Matches: cbg-srv-001, dub-srv-002
+
+# Custom format
+HOSTNAME_PATTERN=^[a-z]{2}-[0-9]{5}-[0-9]{2}$  # Matches: th-12345-45
+```
+
+**Security Note**: This pattern is used to prevent path traversal attacks in the build logs endpoint. Ensure your custom pattern does not allow dangerous characters like `..`, `/`, `\`, or other path separators.
+
+**Testing**: After changing the pattern, verify it accepts valid hostnames and rejects invalid ones:
+```bash
+# Test valid hostname
+curl http://localhost:8000/api/build-logs/your-test-hostname
+
+# Should return 400 if hostname doesn't match pattern
+```
 
 ## Common Tasks
 

@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     # Build Logs
     BUILD_LOGS_DIR: str = "./build_logs"
 
+    # Hostname validation
+    HOSTNAME_PATTERN: str = r'^[a-zA-Z0-9._-]+$'
+
     # Database (optional)
     DATABASE_URL: Optional[str] = None
 
