@@ -5,8 +5,9 @@ import './index.css';
 
 // Development mode logging
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://test-backend.suntrap.workers.dev';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 const APP_NAME = import.meta.env.VITE_APP_NAME || 'SAML Portal';
+const LOGIN_LOGO_PATH = import.meta.env.VITE_LOGIN_LOGO_PATH || 'logo.png';
 
 if (DEV_MODE) {
   console.log('%c🚀 Development Mode Active', 'color: #10b981; font-size: 16px; font-weight: bold;');
@@ -15,6 +16,7 @@ if (DEV_MODE) {
   console.log('  VITE_DEV_MODE:', DEV_MODE);
   console.log('  VITE_BACKEND_URL:', BACKEND_URL);
   console.log('  VITE_APP_NAME:', APP_NAME);
+  console.log('  VITE_LOGIN_LOGO_PATH:', LOGIN_LOGO_PATH);
   console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #6b7280;');
   console.log('%c💡 Dev Mode Features:', 'color: #f59e0b; font-weight: bold;');
   console.log('  ✓ Backend connection attempted first');
