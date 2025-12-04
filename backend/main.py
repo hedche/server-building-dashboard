@@ -186,8 +186,9 @@ async def saml_callback(request: Request, response: Response):
         )
 
         app_logger.info(
-            f"Setting cookie: domain={cookie_domain}, path=/, samesite={samesite_value}, secure={secure_value}, httponly=True"
+            f"Setting cookie: token={session_token[:16]}..., domain={cookie_domain}, path=/, samesite={samesite_value}, secure={secure_value}, httponly=True"
         )
+        app_logger.info(f"Redirecting to: {settings.FRONTEND_URL}/auth/callback")
 
         return redirect_response
 

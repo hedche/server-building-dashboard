@@ -277,14 +277,17 @@ class SAMLAuth:
             + timedelta(seconds=settings.SESSION_LIFETIME_SECONDS),
         }
 
-        logger.info(f"Session created for user: {user_data['email']}")
+        logger.info(f"Session created for user: {user_data['email']}, token: {session_token[:16]}..., total sessions: {len(_sessions)}")
 
     def get_session(self, session_token: str) -> Dict[str, Any] | None:
         """
         Retrieve session data
         Returns None if session doesn't exist or is expired
         """
+        logger.debug(f"Looking up session token: {session_token[:16]}... (total sessions: {len(_sessions)})")
+
         if session_token not in _sessions:
+            logger.warning(f"Session token not found in store. Available tokens: {[t[:16] for t in _sessions.keys()]}")
             return None
 
         session = _sessions[session_token]
@@ -295,6 +298,7 @@ class SAMLAuth:
             logger.info("Session expired and removed")
             return None
 
+        logger.debug(f"Session found for user: {session['user_data'].get('email')}")
         return session["user_data"]
 
     def delete_session(self, session_token: str):
@@ -313,24 +317,30 @@ async def get_current_user(request: Request) -> User:
     Dependency to get current authenticated user
     Validates session token from cookie
     """
+    # Log all cookies received
+    all_cookies = request.cookies
+    logger.debug(f"Request to {request.url.path} - All cookies: {list(all_cookies.keys())}")
+
     session_token = request.cookies.get("session_token")
 
     if not session_token:
-        logger.warning("No session token in request")
+        logger.warning(f"No session token in request to {request.url.path}. Cookies received: {list(all_cookies.keys())}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
             headers={"WWW-Authenticate": "SAML"},
         )
 
+    logger.debug(f"Session token found in cookie: {session_token[:16]}...")
     user_data = saml_auth.get_session(session_token)
 
     if not user_data:
-        logger.warning("Invalid or expired session token")
+        logger.warning(f"Invalid or expired session token: {session_token[:16]}...")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid",
             headers={"WWW-Authenticate": "SAML"},
         )
 
+    logger.debug(f"User authenticated successfully: {user_data.get('email')}")
     return User(**user_data)
