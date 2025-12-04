@@ -106,6 +106,14 @@ class SAMLAuth:
             req_data = self._prepare_request_data(request)
             req_data["post_data"] = {"SAMLResponse": saml_response}
 
+            # Log the derived URL components for debugging
+            logger.info(
+                f"Processing SAML response with: scheme={'https' if req_data['https'] == 'on' else 'http'}, "
+                f"host={req_data['http_host']}, port={req_data['server_port']}"
+            )
+            logger.info(f"Expected Entity ID: {self.saml_settings['sp']['entityId']}")
+            logger.info(f"Expected ACS URL: {self.saml_settings['sp']['assertionConsumerService']['url']}")
+
             auth = OneLogin_Saml2_Auth(req_data, self.saml_settings)
             auth.process_response()
 
