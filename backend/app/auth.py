@@ -42,12 +42,35 @@ class SAMLAuth:
             raise
 
     def _prepare_request_data(self, request: Request) -> Dict[str, Any]:
-        """Prepare request data for python3-saml"""
+        """
+        Prepare request data for python3-saml
+        Respects X-Forwarded-* headers when behind a proxy (e.g., nginx with TLS termination)
+        Falls back to direct request properties for local development
+        """
+        # Use X-Forwarded headers if available (behind proxy)
+        # Otherwise fall back to direct request properties (local dev)
+
+        # Scheme: X-Forwarded-Proto or request.url.scheme
+        forwarded_proto = request.headers.get("X-Forwarded-Proto")
+        scheme = forwarded_proto if forwarded_proto else request.url.scheme
+
+        # Host: X-Forwarded-Host or request.url.netloc
+        forwarded_host = request.headers.get("X-Forwarded-Host")
+        host = forwarded_host if forwarded_host else request.url.netloc
+
+        # Port: X-Forwarded-Port or inferred from scheme
+        forwarded_port = request.headers.get("X-Forwarded-Port")
+        if forwarded_port:
+            port = int(forwarded_port)
+        elif request.url.port:
+            port = request.url.port
+        else:
+            port = 443 if scheme == "https" else 80
+
         return {
-            "https": "on" if request.url.scheme == "https" else "off",
-            "http_host": request.url.netloc,
-            "server_port": request.url.port
-            or (443 if request.url.scheme == "https" else 80),
+            "https": "on" if scheme == "https" else "off",
+            "http_host": host,
+            "server_port": port,
             "script_name": request.url.path,
             "get_data": dict(request.query_params),
             "post_data": {},
