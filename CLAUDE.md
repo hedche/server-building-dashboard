@@ -33,6 +33,8 @@ server-building-dashboard/
 │   ├── tests/              # Pytest test suite
 │   ├── main.py             # FastAPI application entry point
 │   ├── requirements.txt    # Python dependencies
+│   ├── Dockerfile          # Backend Docker build
+│   ├── docker-compose.yml  # Backend Docker Compose
 │   └── CLAUDE.md           # Detailed backend documentation
 ├── vite.config.ts          # Vite build configuration
 ├── tsconfig.json           # TypeScript configuration
@@ -92,11 +94,67 @@ pip install -r requirements.txt
 # Start development server (http://localhost:8000)
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
-# Run tests
+# Run tests (local with venv - requires dependencies installed)
 pytest
 
 # Run tests with coverage
 pytest -v --cov=app --cov=main --cov-report=term-missing
+```
+
+**Testing with Docker (Recommended)**
+
+Docker testing ensures a consistent environment and matches the production build:
+
+```bash
+# From the backend/ directory
+
+# 1. Build the Docker test image
+docker build -t server-dashboard-backend-test:latest .
+
+# 2. Run all tests
+docker run --rm \
+  -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
+  -v "$(pwd)/.env.example:/app/.env:ro" \
+  server-dashboard-backend-test:latest \
+  pytest -v
+
+# 3. Run specific test file (e.g., authentication tests)
+docker run --rm \
+  -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
+  -v "$(pwd)/.env.example:/app/.env:ro" \
+  server-dashboard-backend-test:latest \
+  pytest tests/test_auth.py -v
+
+# 4. Run tests with coverage report
+docker run --rm \
+  -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
+  -v "$(pwd)/.env.example:/app/.env:ro" \
+  server-dashboard-backend-test:latest \
+  pytest -v --cov=app --cov=main --cov-report=term-missing
+
+# 5. Run specific test by name
+docker run --rm \
+  -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
+  -v "$(pwd)/.env.example:/app/.env:ro" \
+  server-dashboard-backend-test:latest \
+  pytest tests/test_auth.py::TestSAMLAuth::test_extract_user_data -v
+```
+
+**Why use Docker for testing?**
+- Ensures consistent Python environment (3.11) across all machines
+- Includes all system dependencies (libxmlsec1, etc.) needed for SAML
+- Matches the production container environment
+- No need to manage local Python virtual environments
+- Works the same on macOS, Linux, and Windows
+
+**Volume Mounts Explained:**
+- `tests:/app/tests:ro` - Mounts your local tests directory (read-only)
+- `saml_metadata:/app/saml_metadata:ro` - SAML IDP metadata required for app initialization
+- `.env.example:/app/.env:ro` - Environment variables for tests (.env.example works for testing)
 ```
 
 ### Fullstack Development
