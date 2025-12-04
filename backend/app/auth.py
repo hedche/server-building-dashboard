@@ -120,6 +120,26 @@ class SAMLAuth:
             errors = auth.get_errors()
             if errors:
                 error_reason = auth.get_last_error_reason()
+
+                # Decode SAML response to see what audience was sent by IdP
+                try:
+                    import base64
+                    import xml.etree.ElementTree as ET
+                    decoded_response = base64.b64decode(saml_response)
+                    logger.debug(f"Decoded SAML Response (first 500 chars): {decoded_response.decode('utf-8')[:500]}")
+
+                    # Try to extract Audience from the response
+                    root = ET.fromstring(decoded_response)
+                    namespaces = {
+                        'saml': 'urn:oasis:names:tc:SAML:2.0:assertion',
+                        'samlp': 'urn:oasis:names:tc:SAML:2.0:protocol'
+                    }
+                    audiences = root.findall('.//saml:Audience', namespaces)
+                    if audiences:
+                        logger.error(f"IdP sent Audience values: {[aud.text for aud in audiences]}")
+                except Exception as e:
+                    logger.warning(f"Could not decode SAML response for debugging: {e}")
+
                 logger.error(
                     f"SAML authentication errors: {errors}, reason: {error_reason}"
                 )
