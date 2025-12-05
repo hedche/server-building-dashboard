@@ -141,7 +141,7 @@ class Settings(BaseSettings):
                 "wantAssertionsSigned": False,
                 "wantAssertionsEncrypted": False,
                 "wantNameIdEncrypted": False,
-                "requestedAuthnContext": True,
+                "requestedAuthnContext": False,  # Accept any authentication method (MFA, passwordless, etc.)
             },
         }
 

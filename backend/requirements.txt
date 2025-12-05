@@ -28,3 +28,13 @@ httpx>=0.26.0
 black>=24.1.1
 ruff>=0.2.1
 
+# Database ORM and async support
+sqlalchemy[asyncio]>=2.0.23
+aiomysql>=0.2.0
+
+# Database migrations
+alembic>=1.13.0
+
+# Required by aiomysql
+cryptography>=41.0.7
+
