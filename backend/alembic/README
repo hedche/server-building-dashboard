@@ -1,0 +1,96 @@
+# Alembic Database Migrations
+
+This directory contains database migration scripts managed by Alembic.
+
+## Quick Start
+
+### Create a new migration (auto-generate from model changes):
+```bash
+cd /Users/monty/dv/server-building-dashboard/backend
+alembic revision --autogenerate -m "Description of changes"
+```
+
+### Apply migrations to database:
+```bash
+alembic upgrade head
+```
+
+### Revert last migration:
+```bash
+alembic downgrade -1
+```
+
+### View current migration status:
+```bash
+alembic current
+```
+
+### View migration history:
+```bash
+alembic history --verbose
+```
+
+## Common Workflows
+
+### 1. Initial Setup (First Time)
+```bash
+# Create initial migration from current models
+alembic revision --autogenerate -m "Initial schema"
+
+# Apply migration to database
+alembic upgrade head
+```
+
+### 2. Adding a New Column
+```bash
+# 1. Modify your model in app/db/models.py
+# 2. Generate migration
+alembic revision --autogenerate -m "Add column_name to table_name"
+
+# 3. Review the generated migration file in alembic/versions/
+# 4. Apply migration
+alembic upgrade head
+```
+
+### 3. Production Deployment
+```bash
+# ALWAYS test migrations in staging first!
+# 1. Backup database
+# 2. Apply migrations
+alembic upgrade head
+
+# 3. Deploy new application code
+# 4. If issues occur, rollback
+alembic downgrade -1
+```
+
+## Docker Usage
+
+### From within Docker container:
+```bash
+docker-compose exec backend-dev alembic upgrade head
+docker-compose exec backend-dev alembic revision --autogenerate -m "My change"
+```
+
+## Important Notes
+
+- **NEVER** edit migration files after they've been applied to production
+- **ALWAYS** review auto-generated migrations before applying them
+- **ALWAYS** test migrations in development/staging before production
+- **ALWAYS** backup your database before applying migrations in production
+- Keep migrations small and focused on one change
+- Write good migration messages that describe the change
+
+## Troubleshooting
+
+### "Can't locate revision identified by 'xxxx'"
+- Check that all migration files are present in alembic/versions/
+- Verify alembic_version table in database matches your migrations
+
+### "Multiple head revisions"
+- Merge branches with: `alembic merge heads -m "merge branches"`
+
+### "Target database is not up to date"
+- Check current version: `alembic current`
+- View pending migrations: `alembic history`
+- Apply migrations: `alembic upgrade head`

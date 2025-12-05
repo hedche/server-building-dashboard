@@ -30,7 +30,27 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     log_startup()
     app_logger.info(f"CORS Origins: {settings.CORS_ORIGINS}")
+
+    # Initialize database if configured
+    if settings.DATABASE_URL:
+        try:
+            from app.db.database import init_db, close_db
+            await init_db()
+            app_logger.info("Database initialized successfully")
+        except Exception as e:
+            app_logger.error(f"Database initialization failed: {e}")
+            # In development, continue without DB; in production, fail fast
+            if settings.ENVIRONMENT == "prod":
+                raise
+    else:
+        app_logger.warning("DATABASE_URL not configured - running without database")
+
     yield
+
+    # Cleanup on shutdown
+    if settings.DATABASE_URL:
+        from app.db.database import close_db
+        await close_db()
     app_logger.info("Shutting down Server Building Dashboard Backend")
 
 
