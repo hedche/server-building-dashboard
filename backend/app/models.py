@@ -104,7 +104,6 @@ class BuildHistoryRecord(BaseModel):
     assigned_status: str = "not assigned"
     build_start: datetime
     build_end: Optional[datetime] = None
-    assigned_to: Optional[str] = None
     assigned_by: Optional[str] = None
     assigned_at: Optional[datetime] = None
     created_at: datetime

@@ -113,7 +113,6 @@ class BuildHistoryDB(Base):
     build_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Assignment
-    assigned_to: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     assigned_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # User email
     assigned_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
