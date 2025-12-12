@@ -1,0 +1,40 @@
+{
+  "regions": {
+    "cbg": {
+      "build_servers": {
+        "cbg-build-01": {
+          "location": "1-1",
+          "build_racks": ["1-1", "1-2", "2-1", "2-2"]
+        }
+      },
+      "racks": {
+        "normal": ["1-1", "1-2", "2-1", "2-2"],
+        "small": ["SR1-1", "SR1-2"]
+      }
+    },
+    "dub": {
+      "build_servers": {
+        "dub-build-01": {
+          "location": "1-1",
+          "build_racks": ["1-1", "1-2"]
+        }
+      },
+      "racks": {
+        "normal": ["1-1", "1-2"],
+        "small": ["SR1-1"]
+      }
+    },
+    "dal": {
+      "build_servers": {
+        "dal-build-01": {
+          "location": "1-1",
+          "build_racks": ["1-1", "1-2"]
+        }
+      },
+      "racks": {
+        "normal": ["1-1", "1-2"],
+        "small": ["SR1-1"]
+      }
+    }
+  }
+}

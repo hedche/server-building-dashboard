@@ -1,8 +1,9 @@
 """
-Integration tests for build status endpoints
+Integration tests for build status and build history endpoints
 """
 
 import pytest
+from datetime import date
 
 
 @pytest.mark.integration
@@ -62,33 +63,67 @@ class TestBuildStatusEndpoint:
 
 @pytest.mark.integration
 class TestBuildHistoryEndpoint:
-    """Tests for build history endpoint"""
+    """Tests for build history endpoint with region-based routing"""
 
-    def test_build_history_requires_auth(self, client, sample_date):
+    def test_build_history_requires_auth(self, client):
         """Test build history endpoint requires authentication"""
-        response = client.get(f"/api/build-history/{sample_date}")
+        response = client.get("/api/build-history/cbg")
         assert response.status_code == 401
 
-    def test_build_history_success(self, client, authenticated_user, sample_date):
-        """Test authenticated user can get build history"""
-        response = client.get(f"/api/build-history/{sample_date}")
+    def test_build_history_today_success(self, client, authenticated_user):
+        """Test authenticated user can get today's build history for a region"""
+        response = client.get("/api/build-history/cbg")
 
         assert response.status_code == 200
         data = response.json()
 
         # Verify response structure
-        assert "cbg" in data
-        assert "dub" in data
-        assert "dal" in data
+        assert "region" in data
+        assert "date" in data
+        assert "servers" in data
 
-        # Verify each region returns a list
-        assert isinstance(data["cbg"], list)
-        assert isinstance(data["dub"], list)
-        assert isinstance(data["dal"], list)
+        # Verify region matches request
+        assert data["region"] == "cbg"
+
+        # Verify date is today
+        assert data["date"] == date.today().isoformat()
+
+        # Verify servers is a list
+        assert isinstance(data["servers"], list)
+
+    def test_build_history_with_date_success(
+        self, client, authenticated_user, sample_date
+    ):
+        """Test authenticated user can get build history for specific date"""
+        response = client.get(f"/api/build-history/dub/{sample_date}")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify response structure
+        assert data["region"] == "dub"
+        assert data["date"] == sample_date
+        assert isinstance(data["servers"], list)
+
+    def test_build_history_all_regions(self, client, authenticated_user):
+        """Test build history for all valid regions"""
+        for region in ["cbg", "dub", "dal"]:
+            response = client.get(f"/api/build-history/{region}")
+            assert response.status_code == 200, f"Failed for region {region}"
+            data = response.json()
+            assert data["region"] == region
+
+    def test_build_history_invalid_region(self, client, authenticated_user):
+        """Test build history rejects invalid region"""
+        response = client.get("/api/build-history/invalid")
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "Invalid region" in data["detail"]
 
     def test_build_history_invalid_date_format(self, client, authenticated_user):
         """Test build history rejects invalid date format"""
-        response = client.get("/api/build-history/invalid-date")
+        response = client.get("/api/build-history/cbg/invalid-date")
 
         assert response.status_code == 400
         data = response.json()
@@ -98,28 +133,35 @@ class TestBuildHistoryEndpoint:
         """Test build history accepts valid date formats"""
         valid_dates = ["2024-01-15", "2024-12-31", "2023-06-01"]
 
-        for date in valid_dates:
-            response = client.get(f"/api/build-history/{date}")
-            assert response.status_code == 200, f"Failed for date {date}"
+        for date_str in valid_dates:
+            response = client.get(f"/api/build-history/cbg/{date_str}")
+            assert response.status_code == 200, f"Failed for date {date_str}"
 
-    def test_build_history_server_structure(
+    def test_build_history_invalid_region_with_date(self, client, authenticated_user):
+        """Test invalid region still rejected with date parameter"""
+        response = client.get("/api/build-history/xyz/2024-01-15")
+
+        assert response.status_code == 400
+        assert "Invalid region" in response.json()["detail"]
+
+    def test_build_history_admin_access(self, client, authenticated_admin):
+        """Test admin can access build history"""
+        response = client.get("/api/build-history/cbg")
+        assert response.status_code == 200
+
+    def test_build_history_response_structure(
         self, client, authenticated_user, sample_date
     ):
-        """Test build history servers have correct structure"""
-        response = client.get(f"/api/build-history/{sample_date}")
+        """Test build history response has correct structure"""
+        response = client.get(f"/api/build-history/cbg/{sample_date}")
         data = response.json()
 
-        # Check at least one region has servers
-        all_servers = data["cbg"] + data["dub"] + data["dal"]
-        if all_servers:
-            server = all_servers[0]
+        # Required top-level fields
+        assert "region" in data
+        assert "date" in data
+        assert "servers" in data
 
-            # Verify server has required fields
-            assert "hostname" in server
-            assert "percent_built" in server
-            assert (
-                server["percent_built"] == 100
-            ), "Historical builds should be 100% complete"
-            assert (
-                server["status"] == "complete"
-            ), "Historical builds should have 'complete' status"
+        # Type checks
+        assert isinstance(data["region"], str)
+        assert isinstance(data["date"], str)
+        assert isinstance(data["servers"], list)

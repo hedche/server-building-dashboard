@@ -78,11 +78,48 @@ class BuildStatus(BaseModel):
 
 
 class BuildHistory(BaseModel):
-    """Build history response model"""
+    """Build history response model (deprecated - use BuildHistoryResponse)"""
 
     cbg: List[Server] = []
     dub: List[Server] = []
     dal: List[Server] = []
+
+
+class BuildHistoryRecord(BaseModel):
+    """Build history record with all database columns"""
+
+    id: int
+    uuid: str
+    hostname: str
+    rack_id: str
+    dbid: str
+    serial_number: str
+    machine_type: str = "Server"
+    bundle: Optional[str] = None
+    ip_address: Optional[str] = None
+    mac_address: Optional[str] = None
+    build_server: str
+    percent_built: int = Field(ge=0, le=100, default=0)
+    build_status: str = "installing"
+    assigned_status: str = "not assigned"
+    build_start: datetime
+    build_end: Optional[datetime] = None
+    assigned_to: Optional[str] = None
+    assigned_by: Optional[str] = None
+    assigned_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BuildHistoryResponse(BaseModel):
+    """Build history response for a single region"""
+
+    region: str = Field(..., description="Region code (cbg, dub, dal)")
+    date: str = Field(..., description="Date in YYYY-MM-DD format")
+    servers: List[BuildHistoryRecord] = []
 
 
 # Preconfig Models
