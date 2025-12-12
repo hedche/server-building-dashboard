@@ -55,7 +55,30 @@ server-building-dashboard/
 
 ## Quick Start
 
-### Frontend Development
+### Docker (Easiest - Full Stack)
+
+Run the entire application stack (frontend + backend + database) with one command:
+
+```bash
+# 1. Copy environment files
+cp .env.example .env
+cd backend && cp .env.example .env && cd ..
+
+# 2. Start all services
+./docker.sh prod start
+
+# Services will be available at:
+# - Frontend: http://localhost:8080
+# - Backend API: http://localhost:8000
+# - Database: localhost:3306
+```
+
+For development with hot-reload:
+```bash
+./docker.sh dev start
+```
+
+### Frontend Development (Local)
 
 ```bash
 # Install dependencies
@@ -333,35 +356,97 @@ See `backend/CLAUDE.md` for detailed backend development guidelines.
 
 ## Docker & Deployment
 
-### Frontend
+### Full Stack with Docker Compose (Recommended)
+
+The easiest way to run the entire application stack (frontend + backend + database) is using the provided `docker.sh` script:
 
 ```bash
-# Build production image (static build with Nginx)
+# Start production environment (all services)
+./docker.sh prod start
+
+# Start development environment (all services with hot-reload)
+./docker.sh dev start
+
+# View logs from all services
+./docker.sh logs -f
+
+# Rebuild and restart (useful after code changes)
+./docker.sh prod rebuild
+
+# Stop all services
+./docker.sh stop
+```
+
+**What gets started:**
+- Frontend (React + Vite) on port 8080
+- Backend (FastAPI) on port 8000
+- MySQL Database on port 3306
+
+**Environment Configuration:**
+
+1. **Root `.env` file** - Controls Docker Compose and frontend build:
+   ```bash
+   # Copy and customize
+   cp .env.example .env
+
+   # Edit these variables:
+   VITE_BACKEND_URL=http://localhost:8000
+   VITE_DEV_MODE=false
+   MYSQL_ROOT_PASSWORD=secure_password
+   MYSQL_DATABASE=server_dashboard
+   MYSQL_USER=dashboard_user
+   MYSQL_PASSWORD=secure_password
+   ```
+
+2. **Backend `.env` file** - Backend-specific configuration:
+   ```bash
+   cd backend
+   cp .env.example .env
+
+   # Edit backend/.env with SAML and other settings
+   ```
+
+**Docker Compose Files:**
+- `docker-compose.yml` - Production configuration
+- `docker-compose.dev.yml` - Development configuration (hot-reload, debug logging)
+
+### Individual Service Deployment
+
+#### Frontend Only
+
+```bash
+# Build production image (static build with serve)
 docker build \
   --build-arg VITE_BACKEND_URL=https://api.example.com \
   --build-arg VITE_DEV_MODE=false \
-  -t server-dashboard:prod .
+  -t server-dashboard-frontend:prod .
 
 # Run container
 docker run -d --restart=unless-stopped -p 8080:8080 \
-  --name server-dashboard-prod server-dashboard:prod
+  --name server-dashboard-frontend server-dashboard-frontend:prod
 ```
 
 **Frontend Docker details:**
-- Multi-stage build: Node.js for building, Nginx for serving
-- Static files served from `/usr/share/nginx/html`
-- Port 8080 exposed
+- Multi-stage build: Node.js for building, serve for hosting
+- Static files served on port 8080
 - `VITE_BACKEND_URL` baked into build (not runtime-configurable)
+- Non-root user (UID 1001)
+- Security headers included
 
-### Backend
+#### Backend Only
 
 ```bash
 # Build backend image
 cd backend
-docker build -t server-dashboard-backend .
+docker build -t server-dashboard-backend:prod .
 
-# Run with Docker Compose
-docker-compose up -d
+# Run container
+docker run -d --restart=unless-stopped \
+  -p 8000:8000 \
+  -v ./saml_metadata:/app/saml_metadata:ro \
+  -v ./.env:/app/.env:ro \
+  --name server-dashboard-backend \
+  server-dashboard-backend:prod
 ```
 
 **Backend Docker details:**

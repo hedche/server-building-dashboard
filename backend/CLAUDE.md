@@ -99,19 +99,21 @@ ruff check .
 ```
 
 ### Docker
+
+**Note**: Docker Compose files have been moved to the repository root. Use the `docker.sh` script from the root directory to manage the full application stack (frontend + backend + database).
+
 ```bash
-# Build image
+# From repository root - run full stack
+cd ..
+./docker.sh prod start      # Start all services
+./docker.sh logs -f         # View logs
+./docker.sh stop            # Stop all services
+
+# Build backend image only (from backend/ directory)
 docker build -t server-dashboard-backend .
-
-# Run with Docker Compose
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop containers
-docker-compose down
 ```
+
+See the main CLAUDE.md in the repository root for full Docker documentation.
 
 ## Architecture
 
