@@ -22,6 +22,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.dev
 
 # Don't keep logo on repo
 public/logo.jpg

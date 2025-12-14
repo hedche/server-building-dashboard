@@ -7,15 +7,20 @@ const AuthCallbackPage: React.FC = () => {
   const { checkAuth } = useAuth();
 
   useEffect(() => {
+    let isMounted = true;
+
     const handleCallback = async () => {
-      // Wait a moment for the backend to set the session
-      setTimeout(async () => {
-        await checkAuth();
+      await checkAuth();
+      if (isMounted) {
         navigate('/dashboard', { replace: true });
-      }, 1000);
+      }
     };
 
     handleCallback();
+
+    return () => {
+      isMounted = false;
+    };
   }, [checkAuth, navigate]);
 
   return (

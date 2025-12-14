@@ -51,11 +51,11 @@ export const usePushPreconfig = () => {
       setError(err instanceof Error ? err.message : 'Failed to push preconfig');
     }
 
-    // Reset status after delay
+    // Reset status after brief delay
     setTimeout(() => {
       setPushStatus('idle');
       setError(null);
-    }, 3000);
+    }, 500);
   };
 
   return {

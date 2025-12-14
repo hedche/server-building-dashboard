@@ -79,10 +79,10 @@ export const useAssignServers = () => {
       }
     }
 
-    // Clear states after a delay to allow user to see results
+    // Clear states after a brief delay to allow user to see results
     setTimeout(() => {
       setAssignmentStates({});
-    }, 3000);
+    }, 500);
   };
 
   return {

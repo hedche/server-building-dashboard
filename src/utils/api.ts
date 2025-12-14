@@ -5,19 +5,6 @@
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
 
-/**
- * Apply simulated API delay if configured
- * Simulates slow network or backend response time
- */
-export const applySimulatedDelay = async (): Promise<void> => {
-  const delaySeconds = parseFloat(import.meta.env.VITE_SIMULATED_API_DELAY_TIME || '0');
-  const delayMs = Math.max(0, delaySeconds * 1000); // Convert to ms, ensure non-negative
-
-  if (delayMs > 0) {
-    await new Promise(resolve => setTimeout(resolve, delayMs));
-  }
-};
-
 // Track backend availability
 let backendAvailable: boolean | null = null;
 let lastHealthCheck = 0;
@@ -94,9 +81,7 @@ export const fetchWithFallback = async <T>(
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
-    await applySimulatedDelay();
-    return data;
+    return await response.json();
   }
 
   // In dev mode, try backend first
@@ -124,9 +109,7 @@ export const fetchWithFallback = async <T>(
       }
       backendAvailable = true;
       lastHealthCheck = Date.now();
-      const data = await response.json();
-      await applySimulatedDelay();
-      return data;
+      return await response.json();
     } else {
       // Backend returned error, fall back to mock
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -140,8 +123,6 @@ export const fetchWithFallback = async <T>(
     backendAvailable = false;
     lastHealthCheck = Date.now();
 
-    // Apply simulated delay
-    await applySimulatedDelay();
     return mockData;
   }
 };
@@ -169,9 +150,7 @@ export const fetchTextWithFallback = async (
       throw response; // Throw Response object so caller can check status
     }
 
-    const data = await response.text();
-    await applySimulatedDelay();
-    return data;
+    return await response.text();
   }
 
   // In dev mode, try backend first
@@ -198,9 +177,7 @@ export const fetchTextWithFallback = async (
       }
       backendAvailable = true;
       lastHealthCheck = Date.now();
-      const data = await response.text();
-      await applySimulatedDelay();
-      return data;
+      return await response.text();
     } else {
       // Backend returned error, fall back to mock
       throw response; // Throw Response object so caller can check status
@@ -214,8 +191,6 @@ export const fetchTextWithFallback = async (
     backendAvailable = false;
     lastHealthCheck = Date.now();
 
-    // Apply simulated delay
-    await applySimulatedDelay();
     return mockData;
   }
 };

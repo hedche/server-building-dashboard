@@ -93,17 +93,13 @@ const AssignPage: React.FC = () => {
   };
 
   const handleAssign = async () => {
-    const serversToAssign = sortedUnassignedServers.filter(server => 
+    const serversToAssign = sortedUnassignedServers.filter(server =>
       selectedServers.has(server.dbid)
     );
-    
+
     await assignServers(serversToAssign);
     setSelectedServers(new Set());
-    
-    // Refresh data after assignment is complete
-    setTimeout(() => {
-      refetch();
-    }, 3500);
+    refetch();
   };
 
   const getAssignmentIcon = (status: AssignmentStatus) => {
