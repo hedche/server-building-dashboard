@@ -1,6 +1,6 @@
 """
 Config endpoint for region/rack/build-server mappings
-Returns configuration data from regions.json
+Returns configuration data from config.json
 """
 
 import json
@@ -8,16 +8,13 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-
-from app.models import User
-from app.auth import get_current_user
+from fastapi import APIRouter, HTTPException, status
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Load config at module level
-CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "regions.json"
+CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "config.json"
 
 _config: Dict[str, Any] = {}
 
@@ -87,19 +84,44 @@ def get_region_for_build_server(build_server: str) -> Optional[str]:
     summary="Get regions configuration",
     description="Returns the full regions configuration including build servers and racks",
 )
-async def get_regions_config(
-    current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+async def get_regions_config() -> Dict[str, Any]:
     """
     Get the full regions configuration.
     Returns build servers and rack mappings for all regions.
+    This endpoint is public and does not require authentication.
     """
     try:
-        logger.info(f"Config requested by {current_user.email}")
+        logger.info("Config requested")
         return get_config()
     except Exception as e:
         logger.error(f"Error fetching config: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch configuration",
+        )
+
+
+@router.get(
+    "/config/preconfig",
+    summary="Get preconfig configuration",
+    description="Returns preconfig settings including appliance sizes",
+)
+async def get_preconfig_config() -> Dict[str, Any]:
+    """
+    Get preconfig configuration settings.
+    Returns appliance sizes and other preconfig-related settings.
+    This endpoint is public and does not require authentication.
+    """
+    try:
+        logger.info("Preconfig config requested")
+        config = get_config()
+        preconfig = config.get("preconfig", {})
+        return {
+            "appliance_sizes": preconfig.get("appliance_sizes", []),
+        }
+    except Exception as e:
+        logger.error(f"Error fetching preconfig config: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch preconfig configuration",
         )

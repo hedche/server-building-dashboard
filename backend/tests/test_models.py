@@ -178,20 +178,22 @@ class TestPreconfigData:
     def test_preconfig_creation_valid(self):
         """Test creating valid preconfig"""
         preconfig = PreconfigData(
-            id="pre-001",
+            dbid="pre-001",
             depot=1,
+            appliance_size="small",
             config={"os": "Ubuntu 22.04"},
             created_at=datetime.utcnow(),
         )
-        assert preconfig.id == "pre-001"
+        assert preconfig.dbid == "pre-001"
         assert preconfig.depot == 1
+        assert preconfig.appliance_size == "small"
         assert preconfig.config == {"os": "Ubuntu 22.04"}
 
     def test_preconfig_depot_validation_valid(self):
         """Test depot validation accepts valid values"""
         for depot in [1, 2, 4]:
             preconfig = PreconfigData(
-                id="pre-001", depot=depot, config={}, created_at=datetime.utcnow()
+                dbid="pre-001", depot=depot, config={}, created_at=datetime.utcnow()
             )
             assert preconfig.depot == depot
 
@@ -199,7 +201,7 @@ class TestPreconfigData:
         """Test depot validation rejects invalid values"""
         with pytest.raises(ValidationError) as exc_info:
             PreconfigData(
-                id="pre-001", depot=3, config={}, created_at=datetime.utcnow()
+                dbid="pre-001", depot=3, config={}, created_at=datetime.utcnow()
             )
         assert "depot must be one of [1, 2, 4]" in str(exc_info.value)
 

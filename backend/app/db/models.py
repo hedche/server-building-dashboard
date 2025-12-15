@@ -54,7 +54,7 @@ class UserDB(Base):
 class PreconfigDB(Base):
     __tablename__ = "preconfigs"
 
-    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    dbid: Mapped[str] = mapped_column(String(100), primary_key=True)
     depot: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     appliance_size: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     config: Mapped[dict] = mapped_column(JSON, nullable=False)
@@ -77,7 +77,7 @@ class PreconfigDB(Base):
     created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # User email
 
     def __repr__(self):
-        return f"<PreconfigDB(id={self.id}, depot={self.depot}, size={self.appliance_size})>"
+        return f"<PreconfigDB(dbid={self.dbid}, depot={self.depot}, size={self.appliance_size})>"
 
 
 # Build History Model

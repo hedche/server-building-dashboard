@@ -1,42 +1,28 @@
 import { useState, useEffect } from 'react';
 import { fetchWithFallback } from '../utils/api';
+import { Preconfig } from './usePreconfigs';
 
-interface PushedPreconfig {
-  id: string;
-  depot: number;
-  config: Record<string, any>;
-  pushed_at: string;
-}
-
-const mockPushedPreconfigs: PushedPreconfig[] = [
+const mockPushedPreconfigs: Preconfig[] = [
   {
-    id: 'p1',
+    dbid: 'pushed-001',
     depot: 1,
-    config: { os: 'ubuntu-20.04', ram: '64GB', storage: '2TB' },
+    appliance_size: 'small',
+    config: { os: 'ubuntu-20.04', ram: '128GB', storage: '4x1TB NVMe' },
+    created_at: '2025-01-14T15:30:00Z',
     pushed_at: '2025-01-14T15:30:00Z'
   },
   {
-    id: 'p2',
-    depot: 1,
-    config: { os: 'centos-8', ram: '32GB', storage: '1TB' },
-    pushed_at: '2025-01-14T14:20:00Z'
-  },
-  {
-    id: 'p3',
+    dbid: 'pushed-002',
     depot: 2,
-    config: { os: 'ubuntu-22.04', ram: '128GB', storage: '4TB' },
+    appliance_size: 'medium',
+    config: { os: 'ubuntu-22.04', ram: '512GB', storage: '12x4TB NVMe' },
+    created_at: '2025-01-13T09:15:00Z',
     pushed_at: '2025-01-13T09:15:00Z'
-  },
-  {
-    id: 'p4',
-    depot: 4,
-    config: { os: 'debian-11', ram: '64GB', storage: '2TB' },
-    pushed_at: '2025-01-12T16:45:00Z'
   },
 ];
 
 export const usePushedPreconfigs = () => {
-  const [pushedPreconfigs, setPushedPreconfigs] = useState<PushedPreconfig[]>([]);
+  const [pushedPreconfigs, setPushedPreconfigs] = useState<Preconfig[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +32,7 @@ export const usePushedPreconfigs = () => {
       setError(null);
 
       // Try backend first, fall back to mock data in dev mode if unreachable
-      const data = await fetchWithFallback<PushedPreconfig[]>(
+      const data = await fetchWithFallback<Preconfig[]>(
         '/api/preconfigs/pushed',
         { credentials: 'include' },
         mockPushedPreconfigs

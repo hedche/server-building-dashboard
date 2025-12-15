@@ -80,6 +80,7 @@ ${BLUE}Services:${NC}
 
 ${BLUE}Environment Files Required:${NC}
   Root:           ${YELLOW}.env${NC} (for frontend build args and DB credentials)
+                  ${YELLOW}.env.dev${NC} (for dev environment - frontend/Docker config)
   Backend:        ${YELLOW}backend/.env${NC} or ${YELLOW}backend/.env.dev${NC}
 
 ${BLUE}Note:${NC}

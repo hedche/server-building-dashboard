@@ -14,13 +14,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import User, BuildStatus, Server, BuildHistoryRecord, BuildHistoryResponse
 from app.auth import get_current_user
 from app.db.models import BuildHistoryDB
-from app.routers.config import get_build_servers_for_region
+from app.routers.config import get_build_servers_for_region, get_config
 from app.config import settings
+from app.permissions import check_region_access
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-VALID_REGIONS = {"cbg", "dub", "dal"}
+
+def _get_valid_regions() -> set:
+    """Get valid regions from config"""
+    config = get_config()
+    return set(config.get("regions", {}).keys())
 
 
 async def get_optional_db() -> Optional[AsyncSession]:
@@ -137,12 +142,21 @@ async def get_build_status(
     """
     Get current build status for all regions
     Returns active server builds with progress
+    Filtered by user's allowed regions (admins see all)
     """
     try:
         logger.info(f"Build status requested by {current_user.email}")
 
         # Simulate database query (TODO: implement real query)
         data = _generate_mock_build_status()
+
+        # Filter by user's allowed regions (admins see all)
+        if not current_user.is_admin:
+            data = {
+                region: servers
+                for region, servers in data.items()
+                if region in current_user.allowed_regions
+            }
 
         return BuildStatus(**data)
 
@@ -234,10 +248,19 @@ async def get_build_history_today(
         Build history records for the specified region
     """
     try:
-        if region not in VALID_REGIONS:
+        valid_regions = _get_valid_regions()
+        if region not in valid_regions:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid region. Must be one of: {', '.join(sorted(VALID_REGIONS))}",
+                detail=f"Invalid region. Must be one of: {', '.join(sorted(valid_regions))}",
+            )
+
+        # Check user has permission for this region
+        if not check_region_access(current_user.email, region):
+            logger.warning(f"Region access denied for {current_user.email} to {region}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied: You do not have permission to access region {region}"
             )
 
         today = date_type.today().isoformat()
@@ -276,10 +299,19 @@ async def get_build_history(
         Build history records for the specified region and date
     """
     try:
-        if region not in VALID_REGIONS:
+        valid_regions = _get_valid_regions()
+        if region not in valid_regions:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid region. Must be one of: {', '.join(sorted(VALID_REGIONS))}",
+                detail=f"Invalid region. Must be one of: {', '.join(sorted(valid_regions))}",
+            )
+
+        # Check user has permission for this region
+        if not check_region_access(current_user.email, region):
+            logger.warning(f"Region access denied for {current_user.email} to {region}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied: You do not have permission to access region {region}"
             )
 
         # Validate date format

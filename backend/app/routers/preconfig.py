@@ -3,27 +3,79 @@ Preconfig management endpoints
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
+from typing import List, Optional
 import logging
 from datetime import datetime
 
+import httpx
+from sqlalchemy import select
+from sqlalchemy.dialects.mysql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models import User, PreconfigData, PushPreconfigRequest, PushPreconfigResponse
 from app.auth import get_current_user
+from app.config import settings
+from app.db.models import PreconfigDB
+from app.permissions import (
+    check_region_access,
+    check_depot_access,
+    get_region_for_depot,
+    get_depot_for_region,
+)
+from app.routers.config import get_config
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-def generate_mock_preconfigs() -> List[PreconfigData]:
+def _get_valid_regions() -> set:
+    """Get valid regions from config"""
+    config = get_config()
+    return set(config.get("regions", {}).keys())
+
+
+def _get_region_to_depot() -> dict:
+    """Get region to depot mapping from config"""
+    config = get_config()
+    regions = config.get("regions", {})
+    return {r: cfg.get("depot_id") for r, cfg in regions.items() if cfg.get("depot_id")}
+
+
+def _get_depot_to_region() -> dict:
+    """Get depot to region mapping from config"""
+    config = get_config()
+    regions = config.get("regions", {})
+    return {cfg.get("depot_id"): r.upper() for r, cfg in regions.items() if cfg.get("depot_id")}
+
+
+async def get_optional_db() -> Optional[AsyncSession]:
     """
-    Generate mock preconfig data
-    Simulates preconfig records from database
+    Optional database dependency - returns None if database not configured.
+    This allows endpoints to gracefully handle missing database.
     """
-    return [
+    if not settings.DATABASE_URL:
+        return None
+
+    try:
+        from app.db.database import get_db
+        async for session in get_db():
+            return session
+    except Exception as e:
+        logger.warning(f"Database connection failed: {str(e)}")
+        return None
+
+
+def generate_mock_preconfigs(depot: int) -> List[PreconfigData]:
+    """
+    Generate mock preconfig data for a specific depot
+    Used when external API or database is not available
+    """
+    all_preconfigs = [
         PreconfigData(
-            id="pre-001",
+            dbid="dbid-001",
             depot=1,
+            appliance_size="small",
             config={
                 "os": "Ubuntu 22.04 LTS",
                 "cpu": "2x Intel Xeon Gold 6248R",
@@ -35,8 +87,9 @@ def generate_mock_preconfigs() -> List[PreconfigData]:
             created_at=datetime.utcnow(),
         ),
         PreconfigData(
-            id="pre-002",
+            dbid="dbid-002",
             depot=1,
+            appliance_size="medium",
             config={
                 "os": "CentOS 8 Stream",
                 "cpu": "2x AMD EPYC 7502",
@@ -48,21 +101,65 @@ def generate_mock_preconfigs() -> List[PreconfigData]:
             created_at=datetime.utcnow(),
         ),
         PreconfigData(
-            id="pre-003",
+            dbid="dbid-003",
+            depot=1,
+            appliance_size="large",
+            config={
+                "os": "Rocky Linux 9",
+                "cpu": "2x AMD EPYC 7763",
+                "ram": "512GB DDR4",
+                "storage": "12x 4TB NVMe SSD",
+                "raid": "RAID 10",
+                "network": "4x 100Gbps",
+            },
+            created_at=datetime.utcnow(),
+        ),
+        PreconfigData(
+            dbid="dbid-004",
             depot=2,
+            appliance_size="small",
             config={
                 "os": "Ubuntu 22.04 LTS",
                 "cpu": "2x Intel Xeon Gold 6348",
-                "ram": "512GB DDR4",
-                "storage": "12x 4TB NVMe SSD",
+                "ram": "128GB DDR4",
+                "storage": "4x 1TB NVMe SSD",
+                "raid": "RAID 10",
+                "network": "2x 25Gbps",
+            },
+            created_at=datetime.utcnow(),
+        ),
+        PreconfigData(
+            dbid="dbid-005",
+            depot=2,
+            appliance_size="medium",
+            config={
+                "os": "Ubuntu 22.04 LTS",
+                "cpu": "2x Intel Xeon Gold 6348",
+                "ram": "256GB DDR4",
+                "storage": "8x 2TB NVMe SSD",
                 "raid": "RAID 10",
                 "network": "2x 100Gbps",
             },
             created_at=datetime.utcnow(),
         ),
         PreconfigData(
-            id="pre-004",
+            dbid="dbid-006",
             depot=4,
+            appliance_size="small",
+            config={
+                "os": "Rocky Linux 9",
+                "cpu": "2x AMD EPYC 7763",
+                "ram": "128GB DDR4",
+                "storage": "4x 1TB NVMe SSD",
+                "raid": "RAID 10",
+                "network": "2x 25Gbps",
+            },
+            created_at=datetime.utcnow(),
+        ),
+        PreconfigData(
+            dbid="dbid-007",
+            depot=4,
+            appliance_size="large",
             config={
                 "os": "Rocky Linux 9",
                 "cpu": "2x AMD EPYC 7763",
@@ -74,6 +171,7 @@ def generate_mock_preconfigs() -> List[PreconfigData]:
             created_at=datetime.utcnow(),
         ),
     ]
+    return [p for p in all_preconfigs if p.depot == depot]
 
 
 def generate_mock_pushed_preconfigs() -> List[PreconfigData]:
@@ -84,8 +182,9 @@ def generate_mock_pushed_preconfigs() -> List[PreconfigData]:
     now = datetime.utcnow()
     return [
         PreconfigData(
-            id="pushed-001",
+            dbid="pushed-001",
             depot=1,
+            appliance_size="small",
             config={
                 "os": "Ubuntu 20.04 LTS",
                 "cpu": "2x Intel Xeon Gold 6248R",
@@ -98,8 +197,9 @@ def generate_mock_pushed_preconfigs() -> List[PreconfigData]:
             pushed_at=now,
         ),
         PreconfigData(
-            id="pushed-002",
+            dbid="pushed-002",
             depot=2,
+            appliance_size="medium",
             config={
                 "os": "Ubuntu 22.04 LTS",
                 "cpu": "2x Intel Xeon Gold 6348",
@@ -114,33 +214,152 @@ def generate_mock_pushed_preconfigs() -> List[PreconfigData]:
     ]
 
 
+async def fetch_preconfigs_from_api() -> dict:
+    """
+    Fetch preconfigs from external API using PSK authentication
+    Returns the raw JSON response as a dict, or empty dict if API unavailable
+    """
+    if not settings.PRECONFIG_API_ENDPOINT or not settings.PRECONFIG_API_PSK:
+        logger.warning("Preconfig API not configured, using mock data")
+        return {}
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                settings.PRECONFIG_API_ENDPOINT,
+                headers={"orange-psk": settings.PRECONFIG_API_PSK}
+            )
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPError as e:
+        logger.error(f"Failed to fetch preconfigs from API: {e}")
+        # Return empty dict to allow fallback to mock data
+        return {}
+
+
+async def upsert_preconfigs_to_db(db, preconfigs_data: dict) -> None:
+    """
+    Upsert preconfigs to database
+    If preconfig with dbid exists, update it; otherwise insert new record
+    """
+    for key, preconfig_obj in preconfigs_data.items():
+        # Extract dbid from key (format: "dbid-{dbid}")
+        dbid = key.replace("dbid-", "") if key.startswith("dbid-") else key
+
+        # Get values from preconfig object
+        depot_id = preconfig_obj.get("depot_id")
+        appliance_size = preconfig_obj.get("appliance_size")
+        config = preconfig_obj  # Store the entire object as config
+
+        if depot_id is None:
+            logger.warning(f"Skipping preconfig {dbid}: missing depot_id")
+            continue
+
+        # MySQL upsert using INSERT ... ON DUPLICATE KEY UPDATE
+        stmt = insert(PreconfigDB).values(
+            dbid=dbid,
+            depot=depot_id,
+            appliance_size=appliance_size,
+            config=config,
+            created_at=datetime.utcnow(),
+        )
+        stmt = stmt.on_duplicate_key_update(
+            depot=stmt.inserted.depot,
+            appliance_size=stmt.inserted.appliance_size,
+            config=stmt.inserted.config,
+            updated_at=datetime.utcnow(),
+        )
+
+        await db.execute(stmt)
+
+    await db.commit()
+
+
 @router.get(
-    "/preconfigs",
+    "/preconfig/{region}",
     response_model=List[PreconfigData],
-    summary="Get all preconfigs",
-    description="Get all preconfigurations across all depots",
+    summary="Get preconfigs by region",
+    description="Get preconfigurations for a specific region. Fetches from external API and stores in database.",
 )
-async def get_preconfigs(
+async def get_preconfigs_by_region(
+    region: str,
     current_user: User = Depends(get_current_user),
+    db=Depends(get_optional_db),
 ) -> List[PreconfigData]:
     """
-    Get all preconfigurations
-    Returns list of preconfig records
+    Get preconfigurations for a specific region
+    1. Validates region
+    2. Checks user has permission for the region
+    3. Fetches from external API (if configured)
+    4. Upserts to database
+    5. Returns preconfigs filtered by region/depot
     """
-    try:
-        logger.info(f"Preconfigs requested by {current_user.email}")
+    # Validate region
+    valid_regions = _get_valid_regions()
+    region_lower = region.lower()
+    if region_lower not in valid_regions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid region: {region}. Must be one of: {', '.join(valid_regions)}"
+        )
 
-        # Simulate database query
-        preconfigs = generate_mock_preconfigs()
+    # Check user has permission for this region
+    if not check_region_access(current_user.email, region_lower):
+        logger.warning(f"Region access denied for {current_user.email} to {region_lower}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied: You do not have permission to access region {region}"
+        )
+
+    region_to_depot = _get_region_to_depot()
+    depot = region_to_depot.get(region_lower)
+    logger.info(f"Preconfigs for region {region} (depot {depot}) requested by {current_user.email}")
+
+    # If no database or API configured, return mock data
+    if db is None or not settings.PRECONFIG_API_ENDPOINT:
+        logger.info("Using mock preconfig data (no DB or API configured)")
+        return generate_mock_preconfigs(depot)
+
+    try:
+        # Fetch from external API
+        preconfigs_data = await fetch_preconfigs_from_api()
+
+        if preconfigs_data:
+            # Upsert to database
+            await upsert_preconfigs_to_db(db, preconfigs_data)
+
+        # Query database for preconfigs matching depot
+        stmt = select(PreconfigDB).where(PreconfigDB.depot == depot)
+        result = await db.execute(stmt)
+        db_preconfigs = result.scalars().all()
+
+        # If no preconfigs found in database, return mock data
+        if not db_preconfigs:
+            logger.info("No preconfigs in database, using mock data")
+            return generate_mock_preconfigs(depot)
+
+        # Convert to Pydantic models
+        preconfigs = [
+            PreconfigData(
+                dbid=p.dbid,
+                depot=p.depot,
+                appliance_size=p.appliance_size,
+                config=p.config,
+                created_at=p.created_at,
+                pushed_at=p.pushed_at,
+            )
+            for p in db_preconfigs
+        ]
 
         return preconfigs
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching preconfigs: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch preconfigs",
-        )
+        # Fall back to mock data on error
+        logger.info("Falling back to mock preconfig data due to error")
+        return generate_mock_preconfigs(depot)
 
 
 @router.post(
@@ -161,9 +380,17 @@ async def push_preconfig(
             f"Push preconfig to depot {request.depot} requested by {current_user.email}"
         )
 
-        # Map depot to region for logging
-        depot_map = {1: "CBG", 2: "DUB", 4: "DAL"}
-        region = depot_map.get(request.depot, "Unknown")
+        # Check user has permission for this depot
+        if not check_depot_access(current_user.email, request.depot):
+            region_name = get_region_for_depot(request.depot) or "Unknown"
+            logger.warning(f"Depot access denied for {current_user.email} to depot {request.depot}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied: You do not have permission to push to depot {request.depot} ({region_name})"
+            )
+
+        depot_to_region = _get_depot_to_region()
+        region = depot_to_region.get(request.depot, "Unknown")
 
         # Simulate preconfig push operation
         # In production, this would:
@@ -181,6 +408,8 @@ async def push_preconfig(
             message=f"Preconfig pushed to depot {request.depot} ({region}) successfully",
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error pushing preconfig: {str(e)}")
         raise HTTPException(
@@ -201,12 +430,19 @@ async def get_pushed_preconfigs(
     """
     Get pushed preconfigurations
     Returns list of preconfig records that have been pushed
+    Filtered by user's allowed regions (admins see all)
     """
     try:
         logger.info(f"Pushed preconfigs requested by {current_user.email}")
 
         # Simulate database query
         preconfigs = generate_mock_pushed_preconfigs()
+
+        # Filter by user's allowed regions (admins see all)
+        if not current_user.is_admin:
+            region_to_depot = _get_region_to_depot()
+            allowed_depots = [region_to_depot.get(r) for r in current_user.allowed_regions if region_to_depot.get(r)]
+            preconfigs = [p for p in preconfigs if p.depot in allowed_depots]
 
         return preconfigs
 

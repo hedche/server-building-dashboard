@@ -15,6 +15,8 @@ from app.models import User, AssignRequest, AssignResponse
 from app.auth import get_current_user
 from app.db.models import BuildHistoryDB
 from app.config import settings
+from app.permissions import check_region_access
+from app.routers.config import get_region_for_build_server
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +89,17 @@ async def assign_server(
                     return AssignResponse(
                         status="failed",
                         message=f"Server with dbid {request.dbid} not found",
+                    )
+
+                # Check user has permission for the server's region
+                region = get_region_for_build_server(server.build_server)
+                if region and not check_region_access(current_user.email, region):
+                    logger.warning(
+                        f"Region access denied for {current_user.email} to assign server in region {region}"
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Access denied: You do not have permission to assign servers in region {region.upper()}"
                     )
 
                 # Update assignment fields

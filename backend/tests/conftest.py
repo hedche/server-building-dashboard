@@ -55,6 +55,34 @@ def mock_admin_user_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
+def mock_cbg_builder_data() -> Dict[str, Any]:
+    """
+    Provides mock CBG builder user data for testing
+    """
+    return {
+        "id": "cbg-builder@example.com",
+        "email": "cbg-builder@example.com",
+        "name": "CBG Builder",
+        "role": "user",
+        "groups": [],
+    }
+
+
+@pytest.fixture
+def mock_unauthorized_user_data() -> Dict[str, Any]:
+    """
+    Provides mock unauthorized user data for testing (not in permissions)
+    """
+    return {
+        "id": "unauthorized@example.com",
+        "email": "unauthorized@example.com",
+        "name": "Unauthorized User",
+        "role": "user",
+        "groups": [],
+    }
+
+
+@pytest.fixture
 def authenticated_user(client, mock_user_data) -> str:
     """
     Creates an authenticated session and returns the session token
@@ -79,6 +107,43 @@ def authenticated_admin(client, mock_admin_user_data) -> str:
     """
     session_token = "admin-session-token-123"
     saml_auth.store_session(session_token, mock_admin_user_data)
+
+    # Set the cookie on the client
+    client.cookies.set("session_token", session_token)
+
+    yield session_token
+
+    # Cleanup: remove the session
+    if session_token in _sessions:
+        del _sessions[session_token]
+
+
+@pytest.fixture
+def authenticated_cbg_builder(client, mock_cbg_builder_data) -> str:
+    """
+    Creates an authenticated CBG builder session and returns the session token
+    """
+    session_token = "cbg-builder-session-token-123"
+    saml_auth.store_session(session_token, mock_cbg_builder_data)
+
+    # Set the cookie on the client
+    client.cookies.set("session_token", session_token)
+
+    yield session_token
+
+    # Cleanup: remove the session
+    if session_token in _sessions:
+        del _sessions[session_token]
+
+
+@pytest.fixture
+def authenticated_unauthorized_user(client, mock_unauthorized_user_data) -> str:
+    """
+    Creates an authenticated session for a user not in permissions
+    This should result in 403 Forbidden errors
+    """
+    session_token = "unauthorized-session-token-123"
+    saml_auth.store_session(session_token, mock_unauthorized_user_data)
 
     # Set the cookie on the client
     client.cookies.set("session_token", session_token)

@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     DB_POOL_RECYCLE: int = 3600  # seconds
     DB_POOL_TIMEOUT: int = 30  # seconds
 
+    # Preconfig API
+    PRECONFIG_API_ENDPOINT: Optional[str] = None
+    PRECONFIG_API_PSK: Optional[str] = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

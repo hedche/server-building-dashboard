@@ -15,8 +15,8 @@ class TestBuildStatusEndpoint:
         response = client.get("/api/build-status")
         assert response.status_code == 401
 
-    def test_build_status_success(self, client, authenticated_user):
-        """Test authenticated user can get build status"""
+    def test_build_status_success(self, client, authenticated_admin):
+        """Test admin can get build status for all regions"""
         response = client.get("/api/build-status")
 
         assert response.status_code == 200
@@ -32,7 +32,7 @@ class TestBuildStatusEndpoint:
         assert isinstance(data["dub"], list)
         assert isinstance(data["dal"], list)
 
-    def test_build_status_server_structure(self, client, authenticated_user):
+    def test_build_status_server_structure(self, client, authenticated_admin):
         """Test build status servers have correct structure"""
         response = client.get("/api/build-status")
         data = response.json()
@@ -92,9 +92,9 @@ class TestBuildHistoryEndpoint:
         assert isinstance(data["servers"], list)
 
     def test_build_history_with_date_success(
-        self, client, authenticated_user, sample_date
+        self, client, authenticated_admin, sample_date
     ):
-        """Test authenticated user can get build history for specific date"""
+        """Test admin can get build history for specific date"""
         response = client.get(f"/api/build-history/dub/{sample_date}")
 
         assert response.status_code == 200
@@ -105,8 +105,8 @@ class TestBuildHistoryEndpoint:
         assert data["date"] == sample_date
         assert isinstance(data["servers"], list)
 
-    def test_build_history_all_regions(self, client, authenticated_user):
-        """Test build history for all valid regions"""
+    def test_build_history_all_regions(self, client, authenticated_admin):
+        """Test admin can access build history for all valid regions"""
         for region in ["cbg", "dub", "dal"]:
             response = client.get(f"/api/build-history/{region}")
             assert response.status_code == 200, f"Failed for region {region}"

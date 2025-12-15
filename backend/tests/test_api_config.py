@@ -9,12 +9,12 @@ import pytest
 class TestConfigEndpoint:
     """Tests for config endpoint"""
 
-    def test_config_requires_auth(self, client):
-        """Test config endpoint requires authentication"""
+    def test_config_is_public(self, client):
+        """Test config endpoint is public (no authentication required)"""
         response = client.get("/api/config")
-        assert response.status_code == 401
+        assert response.status_code == 200
 
-    def test_config_success(self, client, authenticated_user):
+    def test_config_success(self, client):
         """Test authenticated user can get config"""
         response = client.get("/api/config")
 
@@ -30,7 +30,7 @@ class TestConfigEndpoint:
         assert "dub" in regions
         assert "dal" in regions
 
-    def test_config_region_structure(self, client, authenticated_user):
+    def test_config_region_structure(self, client):
         """Test config regions have correct structure"""
         response = client.get("/api/config")
         data = response.json()
@@ -53,7 +53,7 @@ class TestConfigEndpoint:
             assert isinstance(region["racks"]["normal"], list)
             assert isinstance(region["racks"]["small"], list)
 
-    def test_config_build_server_structure(self, client, authenticated_user):
+    def test_config_build_server_structure(self, client):
         """Test config build servers have correct structure"""
         response = client.get("/api/config")
         data = response.json()
@@ -111,3 +111,38 @@ class TestConfigHelpers:
 
         region = get_region_for_build_server("unknown-server")
         assert region is None
+
+
+@pytest.mark.integration
+class TestPreconfigConfigEndpoint:
+    """Tests for preconfig config endpoint"""
+
+    def test_preconfig_config_is_public(self, client):
+        """Test preconfig config endpoint is public (no authentication required)"""
+        response = client.get("/api/config/preconfig")
+        assert response.status_code == 200
+
+    def test_preconfig_config_success(self, client):
+        """Test can get preconfig config"""
+        response = client.get("/api/config/preconfig")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify response structure
+        assert "appliance_sizes" in data
+        assert isinstance(data["appliance_sizes"], list)
+
+    def test_preconfig_config_appliance_sizes(self, client):
+        """Test preconfig config returns appliance sizes"""
+        response = client.get("/api/config/preconfig")
+        data = response.json()
+
+        appliance_sizes = data["appliance_sizes"]
+
+        # Verify appliance_sizes is non-empty
+        assert len(appliance_sizes) > 0
+
+        # Verify all items are strings
+        for size in appliance_sizes:
+            assert isinstance(size, str)

@@ -315,8 +315,10 @@ saml_auth = SAMLAuth()
 async def get_current_user(request: Request) -> User:
     """
     Dependency to get current authenticated user
-    Validates session token from cookie
+    Validates session token from cookie and checks permissions
     """
+    from app.permissions import check_user_has_access, get_user_permissions
+
     # Log all cookies received
     all_cookies = request.cookies
     logger.debug(f"Request to {request.url.path} - All cookies: {list(all_cookies.keys())}")
@@ -342,5 +344,21 @@ async def get_current_user(request: Request) -> User:
             headers={"WWW-Authenticate": "SAML"},
         )
 
-    logger.debug(f"User authenticated successfully: {user_data.get('email')}")
+    # Check if user has permission to access the dashboard
+    email = user_data.get("email", "")
+    has_access, allowed_regions = check_user_has_access(email)
+
+    if not has_access:
+        logger.warning(f"Access denied for {email}: not in any permission list")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: Your email is not authorized to use this dashboard",
+        )
+
+    # Populate permission fields
+    is_admin, allowed_regions = get_user_permissions(email)
+    user_data["is_admin"] = is_admin
+    user_data["allowed_regions"] = allowed_regions
+
+    logger.debug(f"User authenticated successfully: {email} (admin={is_admin}, regions={allowed_regions})")
     return User(**user_data)

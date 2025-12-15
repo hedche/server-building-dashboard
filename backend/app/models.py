@@ -17,6 +17,8 @@ class User(BaseModel):
     name: Optional[str] = None
     role: str = "user"
     groups: List[str] = []
+    is_admin: bool = False
+    allowed_regions: List[str] = Field(default_factory=list)
 
 
 # Server Models
@@ -125,11 +127,12 @@ class BuildHistoryResponse(BaseModel):
 class PreconfigData(BaseModel):
     """Preconfig data model"""
 
-    id: str
+    dbid: str = Field(..., description="Database ID from external preconfig API")
     depot: int = Field(..., ge=1, le=4)
+    appliance_size: Optional[str] = Field(None, description="Appliance size (small, medium, large)")
     config: Dict[str, Any]
     created_at: datetime
-    pushed_at: Optional[datetime] = None  # Add this field
+    pushed_at: Optional[datetime] = None
 
     @validator("depot")
     def validate_depot(cls, v):

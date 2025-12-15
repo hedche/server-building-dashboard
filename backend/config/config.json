@@ -1,0 +1,60 @@
+{
+  "permissions": {
+    "admins": ["admin@example.com", "engineer@example.com"],
+    "builders": {
+      "cbg": ["cbg-builder@example.com", "test@example.com"],
+      "dub": ["dub-builder@example.com"],
+      "dal": ["dal-builder@example.com"]
+    }
+  },
+  "preconfig": {
+    "appliance_sizes": ["small", "medium", "large"]
+  },
+  "regions": {
+    "cbg": {
+      "depot_id": 1,
+      "name": "Cambridge",
+      "build_servers": {
+        "cbg-build-01": {
+          "location": "1-1",
+          "build_racks": ["1-1", "1-2", "2-1", "2-2"],
+          "preconfigs": []
+        }
+      },
+      "racks": {
+        "normal": ["1-1", "1-2", "2-1", "2-2"],
+        "small": ["SR1-1", "SR1-2"]
+      }
+    },
+    "dub": {
+      "depot_id": 2,
+      "name": "Dublin",
+      "build_servers": {
+        "dub-build-01": {
+          "location": "1-1",
+          "build_racks": ["1-1", "1-2"],
+          "preconfigs": []
+        }
+      },
+      "racks": {
+        "normal": ["1-1", "1-2"],
+        "small": ["SR1-1"]
+      }
+    },
+    "dal": {
+      "depot_id": 4,
+      "name": "Dallas",
+      "build_servers": {
+        "dal-build-01": {
+          "location": "1-1",
+          "build_racks": ["1-1", "1-2"],
+          "preconfigs": []
+        }
+      },
+      "racks": {
+        "normal": ["1-1", "1-2"],
+        "small": ["SR1-1"]
+      }
+    }
+  }
+}
