@@ -4,6 +4,13 @@ Integration tests for build status and build history endpoints
 
 import pytest
 from datetime import date
+from app.routers.config import get_config
+
+
+def get_valid_regions() -> list:
+    """Get valid region codes from config.json"""
+    config = get_config()
+    return list(config.get("regions", {}).keys())
 
 
 @pytest.mark.integration
@@ -22,15 +29,12 @@ class TestBuildStatusEndpoint:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify response structure
-        assert "cbg" in data
-        assert "dub" in data
-        assert "dal" in data
-
-        # Verify each region returns a list
-        assert isinstance(data["cbg"], list)
-        assert isinstance(data["dub"], list)
-        assert isinstance(data["dal"], list)
+        # Verify response structure contains all regions from config
+        regions = get_valid_regions()
+        for region in regions:
+            assert region in data
+            # Verify each region returns a list
+            assert isinstance(data[region], list)
 
     def test_build_status_server_structure(self, client, authenticated_admin):
         """Test build status servers have correct structure"""
@@ -38,7 +42,10 @@ class TestBuildStatusEndpoint:
         data = response.json()
 
         # Check at least one region has servers
-        all_servers = data["cbg"] + data["dub"] + data["dal"]
+        regions = get_valid_regions()
+        all_servers = []
+        for region in regions:
+            all_servers.extend(data.get(region, []))
         if all_servers:
             server = all_servers[0]
 
@@ -67,12 +74,16 @@ class TestBuildHistoryEndpoint:
 
     def test_build_history_requires_auth(self, client):
         """Test build history endpoint requires authentication"""
-        response = client.get("/api/build-history/cbg")
+        regions = get_valid_regions()
+        region = regions[0]
+        response = client.get(f"/api/build-history/{region}")
         assert response.status_code == 401
 
     def test_build_history_today_success(self, client, authenticated_user):
         """Test authenticated user can get today's build history for a region"""
-        response = client.get("/api/build-history/cbg")
+        regions = get_valid_regions()
+        region = regions[0]
+        response = client.get(f"/api/build-history/{region}")
 
         assert response.status_code == 200
         data = response.json()
@@ -83,7 +94,7 @@ class TestBuildHistoryEndpoint:
         assert "servers" in data
 
         # Verify region matches request
-        assert data["region"] == "cbg"
+        assert data["region"] == region
 
         # Verify date is today
         assert data["date"] == date.today().isoformat()
@@ -95,19 +106,22 @@ class TestBuildHistoryEndpoint:
         self, client, authenticated_admin, sample_date
     ):
         """Test admin can get build history for specific date"""
-        response = client.get(f"/api/build-history/dub/{sample_date}")
+        regions = get_valid_regions()
+        region = regions[1] if len(regions) > 1 else regions[0]
+        response = client.get(f"/api/build-history/{region}/{sample_date}")
 
         assert response.status_code == 200
         data = response.json()
 
         # Verify response structure
-        assert data["region"] == "dub"
+        assert data["region"] == region
         assert data["date"] == sample_date
         assert isinstance(data["servers"], list)
 
     def test_build_history_all_regions(self, client, authenticated_admin):
         """Test admin can access build history for all valid regions"""
-        for region in ["cbg", "dub", "dal"]:
+        regions = get_valid_regions()
+        for region in regions:
             response = client.get(f"/api/build-history/{region}")
             assert response.status_code == 200, f"Failed for region {region}"
             data = response.json()
@@ -123,7 +137,9 @@ class TestBuildHistoryEndpoint:
 
     def test_build_history_invalid_date_format(self, client, authenticated_user):
         """Test build history rejects invalid date format"""
-        response = client.get("/api/build-history/cbg/invalid-date")
+        regions = get_valid_regions()
+        region = regions[0]
+        response = client.get(f"/api/build-history/{region}/invalid-date")
 
         assert response.status_code == 400
         data = response.json()
@@ -131,10 +147,12 @@ class TestBuildHistoryEndpoint:
 
     def test_build_history_valid_date_formats(self, client, authenticated_user):
         """Test build history accepts valid date formats"""
+        regions = get_valid_regions()
+        region = regions[0]
         valid_dates = ["2024-01-15", "2024-12-31", "2023-06-01"]
 
         for date_str in valid_dates:
-            response = client.get(f"/api/build-history/cbg/{date_str}")
+            response = client.get(f"/api/build-history/{region}/{date_str}")
             assert response.status_code == 200, f"Failed for date {date_str}"
 
     def test_build_history_invalid_region_with_date(self, client, authenticated_user):
@@ -146,14 +164,18 @@ class TestBuildHistoryEndpoint:
 
     def test_build_history_admin_access(self, client, authenticated_admin):
         """Test admin can access build history"""
-        response = client.get("/api/build-history/cbg")
+        regions = get_valid_regions()
+        region = regions[0]
+        response = client.get(f"/api/build-history/{region}")
         assert response.status_code == 200
 
     def test_build_history_response_structure(
         self, client, authenticated_user, sample_date
     ):
         """Test build history response has correct structure"""
-        response = client.get(f"/api/build-history/cbg/{sample_date}")
+        regions = get_valid_regions()
+        region = regions[0]
+        response = client.get(f"/api/build-history/{region}/{sample_date}")
         data = response.json()
 
         # Required top-level fields

@@ -8,6 +8,17 @@ from datetime import datetime
 from enum import Enum
 
 
+def _get_valid_depot_ids() -> List[int]:
+    """Get valid depot IDs from config.json"""
+    from app.routers.config import get_config
+    config = get_config()
+    regions = config.get("regions", {})
+    depot_ids = [r.get("depot_id") for r in regions.values() if r.get("depot_id") is not None]
+    if not depot_ids:
+        raise ValueError("No depot_ids found in config.json regions configuration")
+    return depot_ids
+
+
 # User Models
 class User(BaseModel):
     """User model"""
@@ -72,19 +83,17 @@ class ServerDetails(Server):
 
 
 class BuildStatus(BaseModel):
-    """Build status response model"""
+    """Build status response model - dynamically keyed by region codes from config"""
 
-    cbg: List[Server] = []
-    dub: List[Server] = []
-    dal: List[Server] = []
+    class Config:
+        extra = "allow"  # Allow dynamic region keys
 
 
 class BuildHistory(BaseModel):
-    """Build history response model (deprecated - use BuildHistoryResponse)"""
+    """Build history response model (deprecated - use BuildHistoryResponse) - dynamically keyed by region codes"""
 
-    cbg: List[Server] = []
-    dub: List[Server] = []
-    dal: List[Server] = []
+    class Config:
+        extra = "allow"  # Allow dynamic region keys
 
 
 class BuildHistoryRecord(BaseModel):
@@ -128,7 +137,7 @@ class PreconfigData(BaseModel):
     """Preconfig data model"""
 
     dbid: str = Field(..., description="Database ID from external preconfig API")
-    depot: int = Field(..., ge=1, le=4)
+    depot: int = Field(..., ge=1)
     appliance_size: Optional[str] = Field(None, description="Appliance size (small, medium, large)")
     config: Dict[str, Any]
     created_at: datetime
@@ -136,7 +145,7 @@ class PreconfigData(BaseModel):
 
     @validator("depot")
     def validate_depot(cls, v):
-        valid_depots = [1, 2, 4]
+        valid_depots = _get_valid_depot_ids()
         if v not in valid_depots:
             raise ValueError(f"depot must be one of {valid_depots}")
         return v
@@ -152,7 +161,7 @@ class PushPreconfigRequest(BaseModel):
 
     @validator("depot")
     def validate_depot(cls, v):
-        valid_depots = [1, 2, 4]
+        valid_depots = _get_valid_depot_ids()
         if v not in valid_depots:
             raise ValueError(f"depot must be one of {valid_depots}")
         return v

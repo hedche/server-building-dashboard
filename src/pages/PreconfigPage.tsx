@@ -1,25 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Settings, RefreshCw, AlertCircle, CheckCircle, Upload } from 'lucide-react';
 import { usePreconfigs } from '../hooks/usePreconfigs';
 import { usePushPreconfig } from '../hooks/usePushPreconfig';
 import { usePushedPreconfigs } from '../hooks/usePushedPreconfigs';
 import { usePreconfigConfig } from '../hooks/usePreconfigConfig';
-
-type Region = 'CBG' | 'DUB' | 'DAL';
-
-const regions: { value: Region; label: string; depot: number }[] = [
-  { value: 'CBG', label: 'Cambridge', depot: 1 },
-  { value: 'DUB', label: 'Dublin', depot: 2 },
-  { value: 'DAL', label: 'Dallas', depot: 4 },
-];
+import { useRegionsConfig } from '../hooks/useRegionsConfig';
 
 const PreconfigPage: React.FC = () => {
-  const [selectedRegion, setSelectedRegion] = useState<Region>('CBG');
+  const { regions, getDepotForRegion, getRegionLabelForDepot, isLoading: regionsLoading, error: regionsError } = useRegionsConfig();
+  const [selectedRegion, setSelectedRegion] = useState<string>('');
 
   const { preconfigs, isLoading, error, refetch } = usePreconfigs(selectedRegion);
   const { pushStatus, error: pushError, pushPreconfig } = usePushPreconfig();
   const { pushedPreconfigs, isLoading: pushedLoading, error: pushedError, refetch: refetchPushed } = usePushedPreconfigs();
   const { applianceSizes, isLoading: configLoading, error: configError } = usePreconfigConfig();
+
+  // Set default region once regions are loaded
+  useEffect(() => {
+    if (regions.length > 0 && !selectedRegion) {
+      setSelectedRegion(regions[0].code);
+    }
+  }, [regions, selectedRegion]);
 
   // Calculate appliance size counts
   const applianceSizeCounts = useMemo(() => {
@@ -30,16 +31,12 @@ const PreconfigPage: React.FC = () => {
     return counts;
   }, [preconfigs, applianceSizes]);
 
-  const currentRegion = regions.find(r => r.value === selectedRegion);
-
-  const getRegionNameByDepot = (depot: number) => {
-    const region = regions.find(r => r.depot === depot);
-    return region ? region.label : 'Unknown';
-  };
+  const currentRegion = regions.find(r => r.code === selectedRegion);
 
   const handlePushPreconfig = () => {
-    if (currentRegion) {
-      pushPreconfig(currentRegion.depot);
+    const depot = getDepotForRegion(selectedRegion);
+    if (depot !== undefined) {
+      pushPreconfig(depot);
     }
   };
 
@@ -63,19 +60,19 @@ const PreconfigPage: React.FC = () => {
 
           <select
             value={selectedRegion}
-            onChange={(e) => setSelectedRegion(e.target.value as Region)}
+            onChange={(e) => setSelectedRegion(e.target.value)}
             className="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           >
             {regions.map((region) => (
-              <option key={region.value} value={region.value}>
-                {region.value} - {region.label}
+              <option key={region.code} value={region.code}>
+                {region.code} - {region.label}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      {(isLoading || configLoading) && (
+      {(isLoading || configLoading || regionsLoading) && (
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center space-x-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
@@ -84,16 +81,16 @@ const PreconfigPage: React.FC = () => {
         </div>
       )}
 
-      {(error || pushError || pushedError || configError) && (
+      {(error || pushError || pushedError || configError || regionsError) && (
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <AlertCircle size={16} className="text-red-400" />
-            <span className="text-red-400 font-mono text-sm">Error: {error || pushError || pushedError || configError}</span>
+            <span className="text-red-400 font-mono text-sm">Error: {error || pushError || pushedError || configError || regionsError}</span>
           </div>
         </div>
       )}
 
-      {!isLoading && !configLoading && (
+      {!isLoading && !configLoading && !regionsLoading && selectedRegion && (
         <div className="space-y-6">
           {/* Appliance Size Overview */}
           <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
@@ -223,7 +220,7 @@ const PreconfigPage: React.FC = () => {
                       <tr key={preconfig.dbid} className="border-t border-gray-700 hover:bg-gray-750">
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm">{preconfig.dbid}</td>
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm">
-                          {getRegionNameByDepot(preconfig.depot)}
+                          {getRegionLabelForDepot(preconfig.depot)}
                         </td>
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm capitalize">
                           {preconfig.appliance_size || '-'}

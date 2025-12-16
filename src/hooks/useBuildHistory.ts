@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Server, Region } from '../types/build';
+import { Server } from '../types/build';
 import { fetchWithFallback } from '../utils/api';
 
 // Mock data for dev mode - mix of assigned and unassigned servers

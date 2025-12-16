@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BuildStatus, Region } from '../types/build';
+import { BuildStatus } from '../types/build';
 import { fetchWithFallback } from '../utils/api';
 
 // Mock data for dev mode

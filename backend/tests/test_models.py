@@ -16,7 +16,15 @@ from app.models import (
     AssignRequest,
     ServerStatus,
     AssignedStatus,
+    _get_valid_depot_ids,
 )
+from app.routers.config import get_config
+
+
+def get_valid_regions() -> list:
+    """Get valid region codes from config.json"""
+    config = get_config()
+    return list(config.get("regions", {}).keys())
 
 
 @pytest.mark.unit
@@ -151,14 +159,13 @@ class TestBuildStatus:
     """Tests for BuildStatus model"""
 
     def test_build_status_creation_empty(self):
-        """Test creating build status with empty regions"""
+        """Test creating build status with no regions (dynamically keyed)"""
         status = BuildStatus()
-        assert status.cbg == []
-        assert status.dub == []
-        assert status.dal == []
+        # BuildStatus now uses dynamic keys, so no default region fields
+        assert status.model_dump() == {}
 
     def test_build_status_creation_with_servers(self):
-        """Test creating build status with servers"""
+        """Test creating build status with servers in a dynamic region"""
         server = Server(
             rackID="1-E",
             hostname="test",
@@ -166,9 +173,15 @@ class TestBuildStatus:
             serial_number="SN-1",
             percent_built=50,
         )
-        status = BuildStatus(cbg=[server], dub=[], dal=[])
-        assert len(status.cbg) == 1
-        assert status.cbg[0].hostname == "test"
+        # Get first region from config dynamically
+        regions = get_valid_regions()
+        assert len(regions) > 0, "At least one region must be configured"
+        region = regions[0]
+
+        # BuildStatus now allows dynamic region keys
+        status = BuildStatus(**{region: [server.model_dump()]})
+        assert len(status.model_dump().get(region, [])) == 1
+        assert status.model_dump()[region][0]["hostname"] == "test"
 
 
 @pytest.mark.unit
@@ -177,21 +190,24 @@ class TestPreconfigData:
 
     def test_preconfig_creation_valid(self):
         """Test creating valid preconfig"""
+        valid_depot_ids = _get_valid_depot_ids()
+        depot = valid_depot_ids[0]
         preconfig = PreconfigData(
             dbid="pre-001",
-            depot=1,
+            depot=depot,
             appliance_size="small",
             config={"os": "Ubuntu 22.04"},
             created_at=datetime.utcnow(),
         )
         assert preconfig.dbid == "pre-001"
-        assert preconfig.depot == 1
+        assert preconfig.depot == depot
         assert preconfig.appliance_size == "small"
         assert preconfig.config == {"os": "Ubuntu 22.04"}
 
     def test_preconfig_depot_validation_valid(self):
-        """Test depot validation accepts valid values"""
-        for depot in [1, 2, 4]:
+        """Test depot validation accepts valid values from config"""
+        valid_depot_ids = _get_valid_depot_ids()
+        for depot in valid_depot_ids:
             preconfig = PreconfigData(
                 dbid="pre-001", depot=depot, config={}, created_at=datetime.utcnow()
             )
@@ -199,11 +215,14 @@ class TestPreconfigData:
 
     def test_preconfig_depot_validation_invalid(self):
         """Test depot validation rejects invalid values"""
+        valid_depot_ids = _get_valid_depot_ids()
+        # Find an invalid depot (one that's not in the valid list)
+        invalid_depot = max(valid_depot_ids) + 1
         with pytest.raises(ValidationError) as exc_info:
             PreconfigData(
-                dbid="pre-001", depot=3, config={}, created_at=datetime.utcnow()
+                dbid="pre-001", depot=invalid_depot, config={}, created_at=datetime.utcnow()
             )
-        assert "depot must be one of [1, 2, 4]" in str(exc_info.value)
+        assert f"depot must be one of {valid_depot_ids}" in str(exc_info.value)
 
 
 @pytest.mark.unit
@@ -211,16 +230,19 @@ class TestPushPreconfigRequest:
     """Tests for PushPreconfigRequest model"""
 
     def test_push_preconfig_request_valid(self):
-        """Test creating valid push preconfig request"""
-        for depot in [1, 2, 4]:
+        """Test creating valid push preconfig request with depots from config"""
+        valid_depot_ids = _get_valid_depot_ids()
+        for depot in valid_depot_ids:
             request = PushPreconfigRequest(depot=depot)
             assert request.depot == depot
 
     def test_push_preconfig_request_invalid(self):
         """Test push preconfig request with invalid depot"""
+        valid_depot_ids = _get_valid_depot_ids()
+        invalid_depot = max(valid_depot_ids) + 1
         with pytest.raises(ValidationError) as exc_info:
-            PushPreconfigRequest(depot=5)
-        assert "depot must be one of [1, 2, 4]" in str(exc_info.value)
+            PushPreconfigRequest(depot=invalid_depot)
+        assert f"depot must be one of {valid_depot_ids}" in str(exc_info.value)
 
 
 @pytest.mark.unit

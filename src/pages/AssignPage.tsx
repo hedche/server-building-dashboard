@@ -1,20 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UserCheck, RefreshCw, AlertCircle, ChevronUp, ChevronDown, Check, X } from 'lucide-react';
 import { useBuildHistory } from '../hooks/useBuildHistory';
 import { useAssignServers, AssignmentStatus } from '../hooks/useAssignServers';
-import { Region, Server } from '../types/build';
-
-const regions: { value: Region; label: string }[] = [
-  { value: 'CBG', label: 'CBG' },
-  { value: 'DUB', label: 'DUB' },
-  { value: 'DAL', label: 'DAL' },
-];
+import { useRegionsConfig } from '../hooks/useRegionsConfig';
 
 type SortField = 'rackID' | 'hostname' | 'dbid' | 'serial_number';
 type SortDirection = 'asc' | 'desc';
 
 const AssignPage: React.FC = () => {
-  const [selectedRegion, setSelectedRegion] = useState<Region>('CBG');
+  const { regions, isLoading: regionsLoading, error: regionsError } = useRegionsConfig();
+  const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -24,6 +19,13 @@ const AssignPage: React.FC = () => {
   
   const { buildHistory, isLoading, error, refetch } = useBuildHistory(selectedDate);
   const { assignServers, assignmentStates, error: assignError } = useAssignServers();
+
+  // Set default region once regions are loaded
+  useEffect(() => {
+    if (regions.length > 0 && !selectedRegion) {
+      setSelectedRegion(regions[0].code);
+    }
+  }, [regions, selectedRegion]);
 
   const currentRegionData = buildHistory ? buildHistory[selectedRegion.toLowerCase() as keyof typeof buildHistory] || [] : [];
   
@@ -35,32 +37,31 @@ const AssignPage: React.FC = () => {
 
   const sortedUnassignedServers = useMemo(() => {
     return [...unassignedServers].sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
-      
+      const aValue = a[sortField];
+      const bValue = b[sortField];
+
       if (sortField === 'rackID') {
         // Custom sort for rack IDs (e.g., "1-A", "1-B", "2-A")
         const [aRack, aSlot] = aValue.split('-');
         const [bRack, bSlot] = bValue.split('-');
         const rackCompare = parseInt(aRack) - parseInt(bRack);
         if (rackCompare !== 0) {
-          aValue = rackCompare;
-          bValue = 0;
+          return sortDirection === 'asc' ? rackCompare : -rackCompare;
         } else {
-          aValue = aSlot;
-          bValue = bSlot;
+          const slotCompare = aSlot.localeCompare(bSlot);
+          return sortDirection === 'asc' ? slotCompare : -slotCompare;
         }
       }
-      
+
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         const comparison = aValue.localeCompare(bValue);
         return sortDirection === 'asc' ? comparison : -comparison;
       }
-      
+
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
       }
-      
+
       return 0;
     });
   }, [unassignedServers, sortField, sortDirection]);
@@ -151,19 +152,19 @@ const AssignPage: React.FC = () => {
           
           <select
             value={selectedRegion}
-            onChange={(e) => setSelectedRegion(e.target.value as Region)}
+            onChange={(e) => setSelectedRegion(e.target.value)}
             className="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           >
             {regions.map((region) => (
-              <option key={region.value} value={region.value}>
-                {region.label}
+              <option key={region.code} value={region.code}>
+                {region.code}
               </option>
             ))}
           </select>
         </div>
       </div>
       
-      {isLoading && (
+      {(isLoading || regionsLoading) && (
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center space-x-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
@@ -171,17 +172,17 @@ const AssignPage: React.FC = () => {
           </div>
         </div>
       )}
-      
-      {(error || assignError) && (
+
+      {(error || assignError || regionsError) && (
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <AlertCircle size={16} className="text-red-400" />
-            <span className="text-red-400 font-mono text-sm">Error: {error || assignError}</span>
+            <span className="text-red-400 font-mono text-sm">Error: {error || assignError || regionsError}</span>
           </div>
         </div>
       )}
-      
-      {buildHistory && !isLoading && (
+
+      {buildHistory && !isLoading && !regionsLoading && selectedRegion && (
         <div className="space-y-6">
           {/* Unassigned Servers Section */}
           <div className="bg-gray-800 rounded-lg border border-gray-700">

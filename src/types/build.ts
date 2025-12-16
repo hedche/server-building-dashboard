@@ -9,13 +9,13 @@ export interface Server {
   status: string;
 }
 
+// BuildStatus is now dynamically keyed by region codes from config
 export interface BuildStatus {
-  cbg: Server[];
-  dub: Server[];
-  dal: Server[];
+  [region: string]: Server[];
 }
 
-export type Region = 'CBG' | 'DUB' | 'DAL';
+// Region type is now a string since regions are loaded dynamically from config
+export type Region = string;
 
 export interface RackSlot {
   position: string;

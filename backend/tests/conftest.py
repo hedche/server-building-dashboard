@@ -8,6 +8,27 @@ from typing import Dict, Any
 
 from main import app
 from app.auth import saml_auth, _sessions
+from app.routers.config import get_config
+
+
+def get_valid_regions() -> list:
+    """Get valid region codes from config.json"""
+    config = get_config()
+    return list(config.get("regions", {}).keys())
+
+
+def get_builder_email_for_region(region_index: int = 0) -> str:
+    """Get a builder email for a specific region index from config"""
+    config = get_config()
+    permissions = config.get("permissions", {})
+    builders = permissions.get("builders", {})
+    regions = list(builders.keys())
+    if region_index < len(regions):
+        region = regions[region_index]
+        emails = builders.get(region, [])
+        if emails:
+            return emails[0]
+    return "builder@example.com"
 
 
 @pytest.fixture(scope="session")
@@ -55,14 +76,17 @@ def mock_admin_user_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_cbg_builder_data() -> Dict[str, Any]:
+def mock_first_region_builder_data() -> Dict[str, Any]:
     """
-    Provides mock CBG builder user data for testing
+    Provides mock builder user data for testing (first region from config)
     """
+    email = get_builder_email_for_region(0)
+    regions = get_valid_regions()
+    region = regions[0].upper() if regions else "UNKNOWN"
     return {
-        "id": "cbg-builder@example.com",
-        "email": "cbg-builder@example.com",
-        "name": "CBG Builder",
+        "id": email,
+        "email": email,
+        "name": f"{region} Builder",
         "role": "user",
         "groups": [],
     }
@@ -119,12 +143,12 @@ def authenticated_admin(client, mock_admin_user_data) -> str:
 
 
 @pytest.fixture
-def authenticated_cbg_builder(client, mock_cbg_builder_data) -> str:
+def authenticated_first_region_builder(client, mock_first_region_builder_data) -> str:
     """
-    Creates an authenticated CBG builder session and returns the session token
+    Creates an authenticated builder session for the first region and returns the session token
     """
-    session_token = "cbg-builder-session-token-123"
-    saml_auth.store_session(session_token, mock_cbg_builder_data)
+    session_token = "first-region-builder-session-token-123"
+    saml_auth.store_session(session_token, mock_first_region_builder_data)
 
     # Set the cookie on the client
     client.cookies.set("session_token", session_token)
@@ -202,24 +226,28 @@ def mock_server_data() -> Dict[str, Any]:
 @pytest.fixture
 def mock_build_status_data() -> Dict[str, Any]:
     """
-    Provides mock build status data for testing
+    Provides mock build status data for testing (dynamically keyed by regions from config)
     """
-    return {
-        "cbg": [
-            {
-                "rackID": "1-E",
-                "hostname": "cbg-srv-001",
-                "dbid": "100001",
-                "serial_number": "SN-CBG-001",
-                "percent_built": 55,
-                "assigned_status": "not assigned",
-                "machine_type": "Server",
-                "status": "installing",
-            }
-        ],
-        "dub": [],
-        "dal": [],
-    }
+    regions = get_valid_regions()
+    data = {}
+    for i, region in enumerate(regions):
+        if i == 0:
+            # First region has a sample server
+            data[region] = [
+                {
+                    "rackID": "1-E",
+                    "hostname": f"{region}-srv-001",
+                    "dbid": "100001",
+                    "serial_number": f"SN-{region.upper()}-001",
+                    "percent_built": 55,
+                    "assigned_status": "not assigned",
+                    "machine_type": "Server",
+                    "status": "installing",
+                }
+            ]
+        else:
+            data[region] = []
+    return data
 
 
 @pytest.fixture

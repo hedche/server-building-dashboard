@@ -1,19 +1,20 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, RefreshCw, AlertCircle } from 'lucide-react';
 import { useBuildStatus } from '../hooks/useBuildStatus';
-import { Region } from '../types/build';
+import { useRegionsConfig } from '../hooks/useRegionsConfig';
 import RackVisualization from '../components/RackVisualization';
 
-const regions: { value: Region; label: string }[] = [
-  { value: 'CBG', label: 'CBG' },
-  { value: 'DUB', label: 'DUB' },
-  { value: 'DAL', label: 'DAL' },
-];
-
 const BuildOverviewPage: React.FC = () => {
-  const [selectedRegion, setSelectedRegion] = useState<Region>('CBG');
+  const { regions, isLoading: regionsLoading, error: regionsError } = useRegionsConfig();
+  const [selectedRegion, setSelectedRegion] = useState<string>('');
   const { buildStatus, isLoading, error, refetch } = useBuildStatus();
+
+  // Set default region once regions are loaded
+  useEffect(() => {
+    if (regions.length > 0 && !selectedRegion) {
+      setSelectedRegion(regions[0].code);
+    }
+  }, [regions, selectedRegion]);
 
   const currentRegionData = buildStatus ? buildStatus[selectedRegion.toLowerCase() as keyof typeof buildStatus] : [];
 
@@ -37,19 +38,19 @@ const BuildOverviewPage: React.FC = () => {
           
           <select
             value={selectedRegion}
-            onChange={(e) => setSelectedRegion(e.target.value as Region)}
+            onChange={(e) => setSelectedRegion(e.target.value)}
             className="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           >
             {regions.map((region) => (
-              <option key={region.value} value={region.value}>
-                {region.label}
+              <option key={region.code} value={region.code}>
+                {region.code}
               </option>
             ))}
           </select>
         </div>
       </div>
       
-      {isLoading && (
+      {(isLoading || regionsLoading) && (
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center space-x-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
@@ -57,17 +58,17 @@ const BuildOverviewPage: React.FC = () => {
           </div>
         </div>
       )}
-      
-      {error && (
+
+      {(error || regionsError) && (
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <AlertCircle size={16} className="text-red-400" />
-            <span className="text-red-400 font-mono text-sm">Error: {error}</span>
+            <span className="text-red-400 font-mono text-sm">Error: {error || regionsError}</span>
           </div>
         </div>
       )}
-      
-      {buildStatus && !isLoading && (
+
+      {buildStatus && !isLoading && !regionsLoading && selectedRegion && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white font-mono">
@@ -82,7 +83,7 @@ const BuildOverviewPage: React.FC = () => {
         </div>
       )}
       
-      {buildStatus && !isLoading && currentRegionData.length === 0 && (
+      {buildStatus && !isLoading && !regionsLoading && selectedRegion && currentRegionData.length === 0 && (
         <div className="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center">
           <p className="text-gray-400 font-mono">No servers currently installing in {selectedRegion}</p>
         </div>
