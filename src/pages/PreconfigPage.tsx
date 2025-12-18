@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Settings, RefreshCw, AlertCircle, CheckCircle, Upload } from 'lucide-react';
-import { usePreconfigs } from '../hooks/usePreconfigs';
+import { usePreconfigs, Preconfig } from '../hooks/usePreconfigs';
 import { usePushPreconfig } from '../hooks/usePushPreconfig';
 import { usePushedPreconfigs } from '../hooks/usePushedPreconfigs';
 import { usePreconfigConfig } from '../hooks/usePreconfigConfig';
 import { useRegionsConfig } from '../hooks/useRegionsConfig';
+import PreconfigModal from '../components/PreconfigModal';
 
 const PreconfigPage: React.FC = () => {
   const { regions, getDepotForRegion, getRegionLabelForDepot, isLoading: regionsLoading, error: regionsError } = useRegionsConfig();
   const [selectedRegion, setSelectedRegion] = useState<string>('');
+  const [selectedPreconfig, setSelectedPreconfig] = useState<Preconfig | null>(null);
 
   const { preconfigs, isLoading, error, refetch } = usePreconfigs(selectedRegion);
   const { pushStatus, error: pushError, pushPreconfig } = usePushPreconfig();
@@ -121,14 +123,16 @@ const PreconfigPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <button
-                onClick={handlePushPreconfig}
-                disabled={pushStatus !== 'idle' || preconfigs.length === 0}
-                className="w-full flex items-center justify-center space-x-2 p-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-mono"
-              >
-                <Upload size={18} />
-                <span>Push Preconfig to {selectedRegion}</span>
-              </button>
+              <div className="flex justify-center">
+                <button
+                  onClick={handlePushPreconfig}
+                  disabled={pushStatus !== 'idle' || preconfigs.length === 0}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-mono"
+                >
+                  <Upload size={18} />
+                  <span>Push Preconfig to {selectedRegion}</span>
+                </button>
+              </div>
             )}
           </div>
 
@@ -157,7 +161,11 @@ const PreconfigPage: React.FC = () => {
                   </thead>
                   <tbody>
                     {preconfigs.map((preconfig) => (
-                      <tr key={preconfig.dbid} className="border-t border-gray-700 hover:bg-gray-750">
+                      <tr
+                        key={preconfig.dbid}
+                        className="border-t border-gray-700 hover:bg-gray-750 cursor-pointer transition-colors"
+                        onClick={() => setSelectedPreconfig(preconfig)}
+                      >
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm">{preconfig.dbid}</td>
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm capitalize">
                           {preconfig.appliance_size || '-'}
@@ -242,6 +250,12 @@ const PreconfigPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <PreconfigModal
+        preconfig={selectedPreconfig}
+        isOpen={!!selectedPreconfig}
+        onClose={() => setSelectedPreconfig(null)}
+      />
       </div>
   );
 };

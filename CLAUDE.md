@@ -60,9 +60,12 @@ server-building-dashboard/
 Run the entire application stack (frontend + backend + database) with one command:
 
 ```bash
-# 1. Copy environment files
+# 1. Copy environment and config files
 cp .env.example .env
-cd backend && cp .env.example .env && cd ..
+cd backend
+cp .env.example .env
+cp config/config.json.example config/config.json
+cd ..
 
 # 2. Start all services
 ./docker.sh prod start

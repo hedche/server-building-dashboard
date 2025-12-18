@@ -124,6 +124,32 @@ The API will be available at `http://localhost:8000`
 - API Documentation: `http://localhost:8000/api/docs`
 - Health Check: `http://localhost:8000/api/health`
 
+### Seeding the Development Database
+
+Once your dev stack is running (via `./docker.sh dev start` or `docker-compose.dev.yml`), seed the database with test data:
+
+```bash
+# Seed the database with ~20 test records (clears existing data first)
+docker exec server-dashboard-backend-dev python scripts/seed_dev_data.py
+```
+
+**Seed script options:**
+```bash
+# Append more records without clearing existing data
+docker exec server-dashboard-backend-dev python scripts/seed_dev_data.py --append
+
+# Generate a custom number of records
+docker exec server-dashboard-backend-dev python scripts/seed_dev_data.py --count 50
+
+# Only seed today's data (no historical records from yesterday)
+docker exec server-dashboard-backend-dev python scripts/seed_dev_data.py --today-only
+```
+
+**What gets seeded:**
+- `build_history`: Server builds in various states (installing, complete, failed)
+- `based`: Servers with base images installed
+- `preconfigs`: Configuration presets for each region (CBG, DUB, DAL)
+
 ### Production Deployment
 
 Production instance with security hardening, minimal attack surface, and optimized performance:
@@ -558,7 +584,3 @@ backend/
 ├── docker-compose.yml      # Docker Compose config
 └── .env                    # Environment variables (not in git)
 ```
-
-## License
-
-[Your License Here]

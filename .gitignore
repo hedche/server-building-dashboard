@@ -26,3 +26,6 @@ dist-ssr
 
 # Don't keep logo on repo
 public/logo.jpg
+
+# Backend config contains sensitive information
+backend/config/config.json

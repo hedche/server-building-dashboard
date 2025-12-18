@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Server } from '../types/build';
-import { fetchWithFallback } from '../utils/api';
+import { fetchWithFallback, getBackendUrl } from '../utils/api';
 
 // Mock data for dev mode - mix of assigned and unassigned servers
 const mockBuildHistory: Record<string, Server[]> = {
@@ -33,16 +33,49 @@ export const useBuildHistory = (date: string) => {
       setIsLoading(true);
       setError(null);
 
-      // Try backend first, fall back to mock data in dev mode if unreachable
-      const data = await fetchWithFallback<Record<string, Server[]>>(
-        `/api/build-history/${date}`,
-        { credentials: 'include' },
-        mockBuildHistory
-      );
+      const backendUrl = getBackendUrl();
 
-      setBuildHistory(data);
+      // First, fetch the config to get available regions
+      let regions: string[] = ['cbg', 'dub', 'dal']; // fallback regions
+      try {
+        const configResponse = await fetch(`${backendUrl}/api/config`, {
+          credentials: 'include',
+        });
+        if (configResponse.ok) {
+          const configData = await configResponse.json();
+          regions = Object.keys(configData.regions || {});
+        }
+      } catch (err) {
+        // Use fallback regions if config fetch fails
+      }
+
+      // Fetch build history for each region and combine results
+      const results: Record<string, Server[]> = {};
+      for (const region of regions) {
+        try {
+          const response = await fetch(
+            `${backendUrl}/api/build-history/${region}/${date}`,
+            { credentials: 'include' }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            results[region] = data.servers || [];
+          } else {
+            // Use mock data for this region if request fails
+            results[region] = mockBuildHistory[region] || [];
+          }
+        } catch (err) {
+          // Network error, use mock data for this region
+          results[region] = mockBuildHistory[region] || [];
+        }
+      }
+
+      setBuildHistory(results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch build history');
+      // Fall back to mock data on critical error
+      setBuildHistory(mockBuildHistory);
     } finally {
       setIsLoading(false);
     }

@@ -10,7 +10,11 @@ FastAPI backend for the Server Building Dashboard with SAML2 authentication. Thi
 
 ### Environment Setup
 ```bash
-# Run automated setup script (creates venv, installs deps, generates .env)
+# Copy config files
+cp .env.example .env
+cp config/config.json.example config/config.json
+
+# Run automated setup script (creates venv, installs deps)
 ./setup_script.sh
 
 # Manual setup
