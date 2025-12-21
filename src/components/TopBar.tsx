@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, User } from 'lucide-react';
+import Logo from './Logo';
 
 const TopBar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -8,7 +9,10 @@ const TopBar: React.FC = () => {
   return (
     <header className="bg-gray-800 border-b border-gray-700 px-4 h-14">
       <div className="flex items-center justify-between h-full">
-        <h1 className="text-lg font-bold text-green-400 font-mono">{import.meta.env.VITE_APP_NAME || 'Server Dashboard'}</h1>
+        <div className="flex items-center gap-3">
+          <Logo size="sm" />
+          <h1 className="text-lg font-bold text-green-400 font-mono">{import.meta.env.VITE_APP_NAME || 'Server Dashboard'}</h1>
+        </div>
         <div>
           {isAuthenticated && user ? (
             <div className="flex items-center space-x-3">

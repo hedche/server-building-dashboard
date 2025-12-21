@@ -1,23 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Shield, ArrowRight, Code } from 'lucide-react';
+import Logo from '../components/Logo';
 
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
 
 const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [imageError, setImageError] = useState(false);
-
-  // Logo customization via environment variables
-  const LOGO_PATH = import.meta.env.VITE_LOGIN_LOGO_PATH?.trim();
-  const LOGO_BG_COLOR = import.meta.env.VITE_LOGIN_LOGO_BG_COLOR || 'bg-green-600';
-
-  const handleImageError = () => {
-    console.error('Failed to load custom logo from public directory:', LOGO_PATH);
-    setImageError(true);
-  };
 
   const handleDevModeClick = () => {
     navigate('/dashboard');
@@ -28,19 +19,7 @@ const LoginPage: React.FC = () => {
       <div className="max-w-md w-full space-y-8 p-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className={`w-20 h-20 ${LOGO_BG_COLOR} rounded-full flex items-center justify-center overflow-hidden`}>
-              {LOGO_PATH && !imageError ? (
-                <img
-                  src={`/${LOGO_PATH}`}
-                  alt="Logo"
-                  onError={handleImageError}
-                  className="w-full h-full object-cover"
-                  loading="eager"
-                />
-              ) : (
-                <Shield size={40} className="text-white" />
-              )}
-            </div>
+            <Logo size="md" />
           </div>
           <h2 className="text-3xl font-bold text-white font-mono">{import.meta.env.VITE_APP_NAME || 'Server Dashboard'}</h2>
           <p className="mt-2 text-gray-400 font-mono">
