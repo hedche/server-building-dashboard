@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Settings, RefreshCw, AlertCircle, CheckCircle, Upload, ChevronUp, ChevronDown } from 'lucide-react';
+import { Settings, RefreshCw, AlertCircle, CheckCircle, Upload, ChevronUp, ChevronDown, Search } from 'lucide-react';
 import { usePreconfigs, Preconfig } from '../hooks/usePreconfigs';
 import { usePushPreconfig } from '../hooks/usePushPreconfig';
 import { usePushedPreconfigs } from '../hooks/usePushedPreconfigs';
@@ -23,6 +23,10 @@ const PreconfigPage: React.FC = () => {
   const [pushedSortKey, setPushedSortKey] = useState<PushedSortKey>('pushed_at');
   const [pushedSortDir, setPushedSortDir] = useState<SortDirection>('desc');
 
+  // Search state for both tables
+  const [currentSearch, setCurrentSearch] = useState('');
+  const [pushedSearch, setPushedSearch] = useState('');
+
   const { preconfigs, isLoading, error, refetch } = usePreconfigs(selectedRegion);
   const { pushStatus, error: pushError, pushPreconfig } = usePushPreconfig();
   const { pushedPreconfigs, isLoading: pushedLoading, error: pushedError, refetch: refetchPushed } = usePushedPreconfigs();
@@ -43,9 +47,22 @@ const PreconfigPage: React.FC = () => {
     return counts;
   }, [preconfigs, applianceSizes]);
 
-  // Sort current preconfigs
+  // Filter and sort current preconfigs
   const sortedPreconfigs = useMemo(() => {
-    return [...preconfigs].sort((a, b) => {
+    const searchLower = currentSearch.toLowerCase();
+
+    // Filter by search term
+    const filtered = preconfigs.filter(p => {
+      if (!searchLower) return true;
+      return (
+        p.dbid.toLowerCase().includes(searchLower) ||
+        (p.appliance_size || '').toLowerCase().includes(searchLower) ||
+        JSON.stringify(p.config).toLowerCase().includes(searchLower)
+      );
+    });
+
+    // Sort filtered results
+    return filtered.sort((a, b) => {
       let aVal: string | number | null = null;
       let bVal: string | number | null = null;
 
@@ -69,11 +86,26 @@ const PreconfigPage: React.FC = () => {
       if (aVal > bVal) return currentSortDir === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [preconfigs, currentSortKey, currentSortDir]);
+  }, [preconfigs, currentSortKey, currentSortDir, currentSearch]);
 
-  // Sort pushed preconfigs
+  // Filter and sort pushed preconfigs
   const sortedPushedPreconfigs = useMemo(() => {
-    return [...pushedPreconfigs].sort((a, b) => {
+    const searchLower = pushedSearch.toLowerCase();
+
+    // Filter by search term
+    const filtered = pushedPreconfigs.filter(p => {
+      if (!searchLower) return true;
+      const regionLabel = getRegionLabelForDepot(p.depot) || '';
+      return (
+        p.dbid.toLowerCase().includes(searchLower) ||
+        regionLabel.toLowerCase().includes(searchLower) ||
+        (p.appliance_size || '').toLowerCase().includes(searchLower) ||
+        JSON.stringify(p.config).toLowerCase().includes(searchLower)
+      );
+    });
+
+    // Sort filtered results
+    return filtered.sort((a, b) => {
       let aVal: string | number | null = null;
       let bVal: string | number | null = null;
 
@@ -101,7 +133,7 @@ const PreconfigPage: React.FC = () => {
       if (aVal > bVal) return pushedSortDir === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [pushedPreconfigs, pushedSortKey, pushedSortDir]);
+  }, [pushedPreconfigs, pushedSortKey, pushedSortDir, pushedSearch, getRegionLabelForDepot]);
 
   // Handle sort for current preconfigs table
   const handleCurrentSort = (key: CurrentSortKey) => {
@@ -236,10 +268,20 @@ const PreconfigPage: React.FC = () => {
 
           {/* Preconfigs List */}
           <div className="bg-gray-800 rounded-lg border border-gray-700">
-            <div className="p-4 border-b border-gray-700">
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white font-mono">
-                Current Preconfigs ({preconfigs.length})
+                Current Preconfigs ({sortedPreconfigs.length}{currentSearch && ` / ${preconfigs.length}`})
               </h2>
+              <div className="relative">
+                <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={currentSearch}
+                  onChange={(e) => setCurrentSearch(e.target.value)}
+                  placeholder="Search..."
+                  className="bg-gray-700 border border-gray-600 text-white rounded px-3 py-1 pl-7 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-green-500 placeholder-gray-500"
+                />
+              </div>
             </div>
 
             {preconfigs.length === 0 ? (
@@ -310,16 +352,30 @@ const PreconfigPage: React.FC = () => {
 
           {/* Pushed Preconfigs List */}
           <div className="bg-gray-800 rounded-lg border border-gray-700">
-            <div className="p-4 border-b border-gray-700 flex items-center space-x-2">
-              <CheckCircle size={18} className="text-green-400" />
-              <h2 className="text-lg font-semibold text-white font-mono">Pushed Preconfigs</h2>
-              <button
-                onClick={() => refetchPushed()}
-                disabled={pushedLoading}
-                className="ml-auto px-2 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white rounded transition-colors text-xs"
-              >
-                <RefreshCw size={12} className={`inline ${pushedLoading ? 'animate-spin' : ''}`} />
-              </button>
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <CheckCircle size={18} className="text-green-400" />
+                <h2 className="text-lg font-semibold text-white font-mono">
+                  Pushed Preconfigs ({sortedPushedPreconfigs.length}{pushedSearch && ` / ${pushedPreconfigs.length}`})
+                </h2>
+                <button
+                  onClick={() => refetchPushed()}
+                  disabled={pushedLoading}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white rounded transition-colors text-xs"
+                >
+                  <RefreshCw size={12} className={`inline ${pushedLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              <div className="relative">
+                <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={pushedSearch}
+                  onChange={(e) => setPushedSearch(e.target.value)}
+                  placeholder="Search..."
+                  className="bg-gray-700 border border-gray-600 text-white rounded px-3 py-1 pl-7 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-green-500 placeholder-gray-500"
+                />
+              </div>
             </div>
 
             {pushedLoading ? (
