@@ -6,9 +6,10 @@ interface PreconfigModalProps {
   preconfig: Preconfig | null;
   isOpen: boolean;
   onClose: () => void;
+  regionLabel?: string;
 }
 
-const PreconfigModal: React.FC<PreconfigModalProps> = ({ preconfig, isOpen, onClose }) => {
+const PreconfigModal: React.FC<PreconfigModalProps> = ({ preconfig, isOpen, onClose, regionLabel }) => {
   // Handle click outside to close
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -62,10 +63,22 @@ const PreconfigModal: React.FC<PreconfigModalProps> = ({ preconfig, isOpen, onCl
                 <span className="text-gray-400">Size:</span>
                 <div className="text-white font-mono capitalize">{preconfig.appliance_size || '-'}</div>
               </div>
-              <div className="col-span-2">
+              {regionLabel && (
+                <div>
+                  <span className="text-gray-400">Region:</span>
+                  <div className="text-white font-mono">{regionLabel}</div>
+                </div>
+              )}
+              <div>
                 <span className="text-gray-400">Created:</span>
                 <div className="text-white font-mono text-sm">{formatDateTime(preconfig.created_at)}</div>
               </div>
+              {preconfig.pushed_at && (
+                <div className="col-span-2">
+                  <span className="text-gray-400">Pushed:</span>
+                  <div className="text-white font-mono text-sm">{formatDateTime(preconfig.pushed_at)}</div>
+                </div>
+              )}
             </div>
           </div>
 

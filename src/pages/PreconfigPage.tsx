@@ -1,21 +1,31 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Settings, RefreshCw, AlertCircle, CheckCircle, Upload } from 'lucide-react';
+import { Settings, RefreshCw, AlertCircle, CheckCircle, Upload, ChevronUp, ChevronDown } from 'lucide-react';
 import { usePreconfigs, Preconfig } from '../hooks/usePreconfigs';
 import { usePushPreconfig } from '../hooks/usePushPreconfig';
 import { usePushedPreconfigs } from '../hooks/usePushedPreconfigs';
-import { usePreconfigConfig } from '../hooks/usePreconfigConfig';
 import { useRegionsConfig } from '../hooks/useRegionsConfig';
 import PreconfigModal from '../components/PreconfigModal';
 
+type SortDirection = 'asc' | 'desc';
+type CurrentSortKey = 'dbid' | 'appliance_size' | 'created_at';
+type PushedSortKey = 'dbid' | 'depot' | 'appliance_size' | 'pushed_at';
+
 const PreconfigPage: React.FC = () => {
-  const { regions, getDepotForRegion, getRegionLabelForDepot, isLoading: regionsLoading, error: regionsError } = useRegionsConfig();
+  const { regions, getDepotForRegion, getRegionLabelForDepot, applianceSizes, isLoading: regionsLoading, error: regionsError } = useRegionsConfig();
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [selectedPreconfig, setSelectedPreconfig] = useState<Preconfig | null>(null);
+
+  // Sorting state for Current Preconfigs table
+  const [currentSortKey, setCurrentSortKey] = useState<CurrentSortKey>('created_at');
+  const [currentSortDir, setCurrentSortDir] = useState<SortDirection>('desc');
+
+  // Sorting state for Pushed Preconfigs table
+  const [pushedSortKey, setPushedSortKey] = useState<PushedSortKey>('pushed_at');
+  const [pushedSortDir, setPushedSortDir] = useState<SortDirection>('desc');
 
   const { preconfigs, isLoading, error, refetch } = usePreconfigs(selectedRegion);
   const { pushStatus, error: pushError, pushPreconfig } = usePushPreconfig();
   const { pushedPreconfigs, isLoading: pushedLoading, error: pushedError, refetch: refetchPushed } = usePushedPreconfigs();
-  const { applianceSizes, isLoading: configLoading, error: configError } = usePreconfigConfig();
 
   // Set default region once regions are loaded
   useEffect(() => {
@@ -32,6 +42,94 @@ const PreconfigPage: React.FC = () => {
     });
     return counts;
   }, [preconfigs, applianceSizes]);
+
+  // Sort current preconfigs
+  const sortedPreconfigs = useMemo(() => {
+    return [...preconfigs].sort((a, b) => {
+      let aVal: string | number | null = null;
+      let bVal: string | number | null = null;
+
+      switch (currentSortKey) {
+        case 'dbid':
+          aVal = a.dbid;
+          bVal = b.dbid;
+          break;
+        case 'appliance_size':
+          aVal = a.appliance_size || '';
+          bVal = b.appliance_size || '';
+          break;
+        case 'created_at':
+          aVal = a.created_at;
+          bVal = b.created_at;
+          break;
+      }
+
+      if (aVal === null || bVal === null) return 0;
+      if (aVal < bVal) return currentSortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return currentSortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [preconfigs, currentSortKey, currentSortDir]);
+
+  // Sort pushed preconfigs
+  const sortedPushedPreconfigs = useMemo(() => {
+    return [...pushedPreconfigs].sort((a, b) => {
+      let aVal: string | number | null = null;
+      let bVal: string | number | null = null;
+
+      switch (pushedSortKey) {
+        case 'dbid':
+          aVal = a.dbid;
+          bVal = b.dbid;
+          break;
+        case 'depot':
+          aVal = a.depot;
+          bVal = b.depot;
+          break;
+        case 'appliance_size':
+          aVal = a.appliance_size || '';
+          bVal = b.appliance_size || '';
+          break;
+        case 'pushed_at':
+          aVal = a.pushed_at || '';
+          bVal = b.pushed_at || '';
+          break;
+      }
+
+      if (aVal === null || bVal === null) return 0;
+      if (aVal < bVal) return pushedSortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return pushedSortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [pushedPreconfigs, pushedSortKey, pushedSortDir]);
+
+  // Handle sort for current preconfigs table
+  const handleCurrentSort = (key: CurrentSortKey) => {
+    if (currentSortKey === key) {
+      setCurrentSortDir(currentSortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setCurrentSortKey(key);
+      setCurrentSortDir('asc');
+    }
+  };
+
+  // Handle sort for pushed preconfigs table
+  const handlePushedSort = (key: PushedSortKey) => {
+    if (pushedSortKey === key) {
+      setPushedSortDir(pushedSortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setPushedSortKey(key);
+      setPushedSortDir('asc');
+    }
+  };
+
+  // Render sort indicator
+  const SortIndicator = ({ active, direction }: { active: boolean; direction: SortDirection }) => {
+    if (!active) return <ChevronUp size={14} className="opacity-0 group-hover:opacity-30" />;
+    return direction === 'asc'
+      ? <ChevronUp size={14} className="text-green-400" />
+      : <ChevronDown size={14} className="text-green-400" />;
+  };
 
   const currentRegion = regions.find(r => r.code === selectedRegion);
 
@@ -74,7 +172,7 @@ const PreconfigPage: React.FC = () => {
         </div>
       </div>
 
-      {(isLoading || configLoading || regionsLoading) && (
+      {(isLoading || regionsLoading) && (
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center space-x-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
@@ -83,16 +181,16 @@ const PreconfigPage: React.FC = () => {
         </div>
       )}
 
-      {(error || pushError || pushedError || configError || regionsError) && (
+      {(error || pushError || pushedError || regionsError) && (
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <AlertCircle size={16} className="text-red-400" />
-            <span className="text-red-400 font-mono text-sm">Error: {error || pushError || pushedError || configError || regionsError}</span>
+            <span className="text-red-400 font-mono text-sm">Error: {error || pushError || pushedError || regionsError}</span>
           </div>
         </div>
       )}
 
-      {!isLoading && !configLoading && !regionsLoading && selectedRegion && (
+      {!isLoading && !regionsLoading && selectedRegion && (
         <div className="space-y-6">
           {/* Appliance Size Overview */}
           <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
@@ -153,14 +251,38 @@ const PreconfigPage: React.FC = () => {
                 <table className="w-full">
                   <thead className="bg-gray-700">
                     <tr>
-                      <th className="px-4 py-3 text-left text-white font-mono text-sm">DBID</th>
-                      <th className="px-4 py-3 text-left text-white font-mono text-sm">Size</th>
+                      <th
+                        className="px-4 py-3 text-left text-white font-mono text-sm cursor-pointer hover:bg-gray-600 transition-colors group"
+                        onClick={() => handleCurrentSort('dbid')}
+                      >
+                        <div className="flex items-center gap-1">
+                          DBID
+                          <SortIndicator active={currentSortKey === 'dbid'} direction={currentSortDir} />
+                        </div>
+                      </th>
+                      <th
+                        className="px-4 py-3 text-left text-white font-mono text-sm cursor-pointer hover:bg-gray-600 transition-colors group"
+                        onClick={() => handleCurrentSort('appliance_size')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Size
+                          <SortIndicator active={currentSortKey === 'appliance_size'} direction={currentSortDir} />
+                        </div>
+                      </th>
                       <th className="px-4 py-3 text-left text-white font-mono text-sm">Config</th>
-                      <th className="px-4 py-3 text-left text-white font-mono text-sm">Created</th>
+                      <th
+                        className="px-4 py-3 text-left text-white font-mono text-sm cursor-pointer hover:bg-gray-600 transition-colors group"
+                        onClick={() => handleCurrentSort('created_at')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Created
+                          <SortIndicator active={currentSortKey === 'created_at'} direction={currentSortDir} />
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {preconfigs.map((preconfig) => (
+                    {sortedPreconfigs.map((preconfig) => (
                       <tr
                         key={preconfig.dbid}
                         className="border-t border-gray-700 hover:bg-gray-750 cursor-pointer transition-colors"
@@ -216,16 +338,52 @@ const PreconfigPage: React.FC = () => {
                 <table className="w-full">
                   <thead className="bg-gray-700">
                     <tr>
-                      <th className="px-4 py-3 text-left text-white font-mono text-sm">DBID</th>
-                      <th className="px-4 py-3 text-left text-white font-mono text-sm">Region</th>
-                      <th className="px-4 py-3 text-left text-white font-mono text-sm">Size</th>
+                      <th
+                        className="px-4 py-3 text-left text-white font-mono text-sm cursor-pointer hover:bg-gray-600 transition-colors group"
+                        onClick={() => handlePushedSort('dbid')}
+                      >
+                        <div className="flex items-center gap-1">
+                          DBID
+                          <SortIndicator active={pushedSortKey === 'dbid'} direction={pushedSortDir} />
+                        </div>
+                      </th>
+                      <th
+                        className="px-4 py-3 text-left text-white font-mono text-sm cursor-pointer hover:bg-gray-600 transition-colors group"
+                        onClick={() => handlePushedSort('depot')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Region
+                          <SortIndicator active={pushedSortKey === 'depot'} direction={pushedSortDir} />
+                        </div>
+                      </th>
+                      <th
+                        className="px-4 py-3 text-left text-white font-mono text-sm cursor-pointer hover:bg-gray-600 transition-colors group"
+                        onClick={() => handlePushedSort('appliance_size')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Size
+                          <SortIndicator active={pushedSortKey === 'appliance_size'} direction={pushedSortDir} />
+                        </div>
+                      </th>
                       <th className="px-4 py-3 text-left text-white font-mono text-sm">Config</th>
-                      <th className="px-4 py-3 text-left text-white font-mono text-sm">Pushed</th>
+                      <th
+                        className="px-4 py-3 text-left text-white font-mono text-sm cursor-pointer hover:bg-gray-600 transition-colors group"
+                        onClick={() => handlePushedSort('pushed_at')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Pushed
+                          <SortIndicator active={pushedSortKey === 'pushed_at'} direction={pushedSortDir} />
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pushedPreconfigs.map((preconfig) => (
-                      <tr key={preconfig.dbid} className="border-t border-gray-700 hover:bg-gray-750">
+                    {sortedPushedPreconfigs.map((preconfig) => (
+                      <tr
+                        key={preconfig.dbid}
+                        className="border-t border-gray-700 hover:bg-gray-750 cursor-pointer transition-colors"
+                        onClick={() => setSelectedPreconfig(preconfig)}
+                      >
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm">{preconfig.dbid}</td>
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm">
                           {getRegionLabelForDepot(preconfig.depot)}
@@ -255,6 +413,7 @@ const PreconfigPage: React.FC = () => {
         preconfig={selectedPreconfig}
         isOpen={!!selectedPreconfig}
         onClose={() => setSelectedPreconfig(null)}
+        regionLabel={selectedPreconfig?.pushed_at ? getRegionLabelForDepot(selectedPreconfig.depot) : undefined}
       />
       </div>
   );

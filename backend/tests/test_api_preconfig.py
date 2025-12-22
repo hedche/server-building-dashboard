@@ -125,12 +125,12 @@ class TestPushedPreconfigsEndpoint:
 
     def test_pushed_preconfigs_requires_auth(self, client):
         """Test pushed preconfigs endpoint requires authentication"""
-        response = client.get("/api/preconfigs/pushed")
+        response = client.get("/api/preconfig/pushed")
         assert response.status_code == 401
 
     def test_pushed_preconfigs_success(self, client, authenticated_user):
         """Test authenticated user can get pushed preconfigs"""
-        response = client.get("/api/preconfigs/pushed")
+        response = client.get("/api/preconfig/pushed")
 
         assert response.status_code == 200
         data = response.json()

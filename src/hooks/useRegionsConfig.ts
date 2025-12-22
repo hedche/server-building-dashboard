@@ -111,10 +111,14 @@ export const useRegionsConfig = () => {
     ? Object.values(config.regions).map((r) => r.depot_id)
     : [];
 
+  // Get appliance sizes from config
+  const applianceSizes: string[] = config?.preconfig?.appliance_sizes ?? [];
+
   return {
     config,
     regions,
     validDepotIds,
+    applianceSizes,
     isLoading,
     error,
     refetch: fetchConfig,

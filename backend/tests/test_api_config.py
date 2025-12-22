@@ -111,38 +111,3 @@ class TestConfigHelpers:
 
         region = get_region_for_build_server("unknown-server")
         assert region is None
-
-
-@pytest.mark.integration
-class TestPreconfigConfigEndpoint:
-    """Tests for preconfig config endpoint"""
-
-    def test_preconfig_config_is_public(self, client):
-        """Test preconfig config endpoint is public (no authentication required)"""
-        response = client.get("/api/config/preconfig")
-        assert response.status_code == 200
-
-    def test_preconfig_config_success(self, client):
-        """Test can get preconfig config"""
-        response = client.get("/api/config/preconfig")
-
-        assert response.status_code == 200
-        data = response.json()
-
-        # Verify response structure
-        assert "appliance_sizes" in data
-        assert isinstance(data["appliance_sizes"], list)
-
-    def test_preconfig_config_appliance_sizes(self, client):
-        """Test preconfig config returns appliance sizes"""
-        response = client.get("/api/config/preconfig")
-        data = response.json()
-
-        appliance_sizes = data["appliance_sizes"]
-
-        # Verify appliance_sizes is non-empty
-        assert len(appliance_sizes) > 0
-
-        # Verify all items are strings
-        for size in appliance_sizes:
-            assert isinstance(size, str)

@@ -22,7 +22,7 @@ from app.permissions import (
     get_region_for_depot,
     get_depot_for_region,
 )
-from app.routers.config import get_config
+from app.routers.config import get_config, get_appliance_sizes
 
 logger = logging.getLogger(__name__)
 
@@ -70,148 +70,103 @@ def generate_mock_preconfigs(depot: int) -> List[PreconfigData]:
     """
     Generate mock preconfig data for a specific depot
     Used when external API or database is not available
+    Appliance sizes are read from config.json
     """
-    all_preconfigs = [
-        PreconfigData(
-            dbid="dbid-001",
-            depot=1,
-            appliance_size="small",
-            config={
-                "os": "Ubuntu 22.04 LTS",
-                "cpu": "2x Intel Xeon Gold 6248R",
-                "ram": "128GB DDR4",
-                "storage": "4x 1TB NVMe SSD",
-                "raid": "RAID 10",
-                "network": "2x 25Gbps",
-            },
-            created_at=datetime.utcnow(),
-        ),
-        PreconfigData(
-            dbid="dbid-002",
-            depot=1,
-            appliance_size="medium",
-            config={
-                "os": "CentOS 8 Stream",
-                "cpu": "2x AMD EPYC 7502",
-                "ram": "256GB DDR4",
-                "storage": "8x 2TB NVMe SSD",
-                "raid": "RAID 6",
-                "network": "2x 100Gbps",
-            },
-            created_at=datetime.utcnow(),
-        ),
-        PreconfigData(
-            dbid="dbid-003",
-            depot=1,
-            appliance_size="large",
-            config={
-                "os": "Rocky Linux 9",
-                "cpu": "2x AMD EPYC 7763",
-                "ram": "512GB DDR4",
-                "storage": "12x 4TB NVMe SSD",
-                "raid": "RAID 10",
-                "network": "4x 100Gbps",
-            },
-            created_at=datetime.utcnow(),
-        ),
-        PreconfigData(
-            dbid="dbid-004",
-            depot=2,
-            appliance_size="small",
-            config={
-                "os": "Ubuntu 22.04 LTS",
-                "cpu": "2x Intel Xeon Gold 6348",
-                "ram": "128GB DDR4",
-                "storage": "4x 1TB NVMe SSD",
-                "raid": "RAID 10",
-                "network": "2x 25Gbps",
-            },
-            created_at=datetime.utcnow(),
-        ),
-        PreconfigData(
-            dbid="dbid-005",
-            depot=2,
-            appliance_size="medium",
-            config={
-                "os": "Ubuntu 22.04 LTS",
-                "cpu": "2x Intel Xeon Gold 6348",
-                "ram": "256GB DDR4",
-                "storage": "8x 2TB NVMe SSD",
-                "raid": "RAID 10",
-                "network": "2x 100Gbps",
-            },
-            created_at=datetime.utcnow(),
-        ),
-        PreconfigData(
-            dbid="dbid-006",
-            depot=4,
-            appliance_size="small",
-            config={
-                "os": "Rocky Linux 9",
-                "cpu": "2x AMD EPYC 7763",
-                "ram": "128GB DDR4",
-                "storage": "4x 1TB NVMe SSD",
-                "raid": "RAID 10",
-                "network": "2x 25Gbps",
-            },
-            created_at=datetime.utcnow(),
-        ),
-        PreconfigData(
-            dbid="dbid-007",
-            depot=4,
-            appliance_size="large",
-            config={
-                "os": "Rocky Linux 9",
-                "cpu": "2x AMD EPYC 7763",
-                "ram": "1TB DDR4",
-                "storage": "16x 8TB NVMe SSD",
-                "raid": "RAID 60",
-                "network": "4x 100Gbps",
-            },
-            created_at=datetime.utcnow(),
-        ),
+    appliance_sizes = get_appliance_sizes()
+
+    # Sample configs that scale with appliance size
+    sample_configs = [
+        {
+            "os": "Ubuntu 22.04 LTS",
+            "cpu": "2x Intel Xeon Gold 6248R",
+            "ram": "128GB DDR4",
+            "storage": "4x 1TB NVMe SSD",
+            "raid": "RAID 10",
+            "network": "2x 25Gbps",
+        },
+        {
+            "os": "CentOS 8 Stream",
+            "cpu": "2x AMD EPYC 7502",
+            "ram": "256GB DDR4",
+            "storage": "8x 2TB NVMe SSD",
+            "raid": "RAID 6",
+            "network": "2x 100Gbps",
+        },
+        {
+            "os": "Rocky Linux 9",
+            "cpu": "2x AMD EPYC 7763",
+            "ram": "512GB DDR4",
+            "storage": "12x 4TB NVMe SSD",
+            "raid": "RAID 10",
+            "network": "4x 100Gbps",
+        },
     ]
-    return [p for p in all_preconfigs if p.depot == depot]
+
+    preconfigs = []
+    for i, size in enumerate(appliance_sizes):
+        config = sample_configs[i % len(sample_configs)]
+        preconfigs.append(
+            PreconfigData(
+                dbid=f"dbid-{depot:03d}-{i + 1:03d}",
+                depot=depot,
+                appliance_size=size,
+                config=config,
+                created_at=datetime.utcnow(),
+            )
+        )
+
+    return preconfigs
 
 
 def generate_mock_pushed_preconfigs() -> List[PreconfigData]:
     """
     Generate mock pushed preconfig data
     Simulates preconfigs that have been pushed to depots
+    Appliance sizes are read from config.json
     """
+    appliance_sizes = get_appliance_sizes()
     now = datetime.utcnow()
-    return [
-        PreconfigData(
-            dbid="pushed-001",
-            depot=1,
-            appliance_size="small",
-            config={
-                "os": "Ubuntu 20.04 LTS",
-                "cpu": "2x Intel Xeon Gold 6248R",
-                "ram": "128GB DDR4",
-                "storage": "4x 1TB NVMe SSD",
-                "raid": "RAID 10",
-                "network": "2x 25Gbps",
-            },
-            created_at=now,
-            pushed_at=now,
-        ),
-        PreconfigData(
-            dbid="pushed-002",
-            depot=2,
-            appliance_size="medium",
-            config={
-                "os": "Ubuntu 22.04 LTS",
-                "cpu": "2x Intel Xeon Gold 6348",
-                "ram": "512GB DDR4",
-                "storage": "12x 4TB NVMe SSD",
-                "raid": "RAID 10",
-                "network": "2x 100Gbps",
-            },
-            created_at=now,
-            pushed_at=now,
-        ),
-    ]
+
+    # Return a couple of pushed preconfigs using sizes from config
+    preconfigs = []
+    if len(appliance_sizes) >= 1:
+        preconfigs.append(
+            PreconfigData(
+                dbid="pushed-001",
+                depot=1,
+                appliance_size=appliance_sizes[0],
+                config={
+                    "os": "Ubuntu 20.04 LTS",
+                    "cpu": "2x Intel Xeon Gold 6248R",
+                    "ram": "128GB DDR4",
+                    "storage": "4x 1TB NVMe SSD",
+                    "raid": "RAID 10",
+                    "network": "2x 25Gbps",
+                },
+                created_at=now,
+                pushed_at=now,
+            )
+        )
+    if len(appliance_sizes) >= 2:
+        preconfigs.append(
+            PreconfigData(
+                dbid="pushed-002",
+                depot=2,
+                appliance_size=appliance_sizes[1],
+                config={
+                    "os": "Ubuntu 22.04 LTS",
+                    "cpu": "2x Intel Xeon Gold 6348",
+                    "ram": "512GB DDR4",
+                    "storage": "12x 4TB NVMe SSD",
+                    "raid": "RAID 10",
+                    "network": "2x 100Gbps",
+                },
+                created_at=now,
+                pushed_at=now,
+            )
+        )
+
+    return preconfigs
 
 
 async def fetch_preconfigs_from_api() -> dict:
@@ -273,6 +228,42 @@ async def upsert_preconfigs_to_db(db, preconfigs_data: dict) -> None:
         await db.execute(stmt)
 
     await db.commit()
+
+
+@router.get(
+    "/preconfig/pushed",
+    response_model=List[PreconfigData],
+    summary="Get pushed preconfigs",
+    description="Get preconfigurations that have been pushed to depots",
+)
+async def get_pushed_preconfigs(
+    current_user: User = Depends(get_current_user),
+) -> List[PreconfigData]:
+    """
+    Get pushed preconfigurations
+    Returns list of preconfig records that have been pushed
+    Filtered by user's allowed regions (admins see all)
+    """
+    try:
+        logger.info(f"Pushed preconfigs requested by {current_user.email}")
+
+        # Simulate database query
+        preconfigs = generate_mock_pushed_preconfigs()
+
+        # Filter by user's allowed regions (admins see all)
+        if not current_user.is_admin:
+            region_to_depot = _get_region_to_depot()
+            allowed_depots = [region_to_depot.get(r) for r in current_user.allowed_regions if region_to_depot.get(r)]
+            preconfigs = [p for p in preconfigs if p.depot in allowed_depots]
+
+        return preconfigs
+
+    except Exception as e:
+        logger.error(f"Error fetching pushed preconfigs: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch pushed preconfigs",
+        )
 
 
 @router.get(
@@ -415,40 +406,4 @@ async def push_preconfig(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to push preconfig",
-        )
-
-
-@router.get(
-    "/preconfigs/pushed",
-    response_model=List[PreconfigData],
-    summary="Get pushed preconfigs",
-    description="Get preconfigurations that have been pushed to depots",
-)
-async def get_pushed_preconfigs(
-    current_user: User = Depends(get_current_user),
-) -> List[PreconfigData]:
-    """
-    Get pushed preconfigurations
-    Returns list of preconfig records that have been pushed
-    Filtered by user's allowed regions (admins see all)
-    """
-    try:
-        logger.info(f"Pushed preconfigs requested by {current_user.email}")
-
-        # Simulate database query
-        preconfigs = generate_mock_pushed_preconfigs()
-
-        # Filter by user's allowed regions (admins see all)
-        if not current_user.is_admin:
-            region_to_depot = _get_region_to_depot()
-            allowed_depots = [region_to_depot.get(r) for r in current_user.allowed_regions if region_to_depot.get(r)]
-            preconfigs = [p for p in preconfigs if p.depot in allowed_depots]
-
-        return preconfigs
-
-    except Exception as e:
-        logger.error(f"Error fetching pushed preconfigs: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch pushed preconfigs",
         )

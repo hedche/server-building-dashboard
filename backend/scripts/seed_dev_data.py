@@ -13,6 +13,7 @@ Usage:
 """
 import argparse
 import asyncio
+import json
 import logging
 import random
 import sys
@@ -22,6 +23,21 @@ from pathlib import Path
 
 # Add parent directory to path so we can import app modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+
+def load_config() -> dict:
+    """Load config.json with fallback to config.json.example"""
+    config_dir = Path(__file__).parent.parent / "config"
+    for filename in ["config.json", "config.json.example"]:
+        config_path = config_dir / filename
+        try:
+            with open(config_path, "r") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            continue
+        except json.JSONDecodeError:
+            continue
+    return {}
 
 from sqlalchemy import delete, text
 from app.db.database import get_db_context, init_db
@@ -65,8 +81,11 @@ BUILD_STATUS_WEIGHTS = [0.4, 0.5, 0.1]  # 40% installing, 50% complete, 10% fail
 ASSIGNED_STATUSES = ["assigned", "not assigned"]
 MACHINE_TYPES = ["Server", "Storage", "Network"]
 BUNDLES = ["standard", "premium", "enterprise", None]
-APPLIANCE_SIZES = ["small", "medium", "large"]
 CONDITIONS = ["good", "needs_repair", "pending_qa"]
+
+# Load appliance sizes from config (with fallback)
+_config = load_config()
+APPLIANCE_SIZES = _config.get("preconfig", {}).get("appliance_sizes", ["small", "medium", "large"])
 
 OS_OPTIONS = ["Ubuntu 22.04 LTS", "Rocky Linux 9", "Debian 12", "RHEL 9"]
 CPU_OPTIONS = [

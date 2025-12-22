@@ -15,23 +15,30 @@ logger = logging.getLogger(__name__)
 
 # Load config at module level
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "config.json"
+CONFIG_EXAMPLE_PATH = Path(__file__).parent.parent.parent / "config" / "config.json.example"
 
 _config: Dict[str, Any] = {}
 
 
 def _load_config() -> Dict[str, Any]:
-    """Load regions config from JSON file"""
+    """Load regions config from JSON file, with fallback to config.json.example"""
     global _config
     if not _config:
-        try:
-            with open(CONFIG_PATH, "r") as f:
-                _config = json.load(f)
-            logger.info(f"Loaded regions config from {CONFIG_PATH}")
-        except FileNotFoundError:
-            logger.error(f"Config file not found: {CONFIG_PATH}")
-            _config = {"regions": {}}
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in config file: {e}")
+        # Try config.json first, then fall back to config.json.example
+        for config_path in [CONFIG_PATH, CONFIG_EXAMPLE_PATH]:
+            try:
+                with open(config_path, "r") as f:
+                    _config = json.load(f)
+                logger.info(f"Loaded regions config from {config_path}")
+                break
+            except FileNotFoundError:
+                continue
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in config file {config_path}: {e}")
+                continue
+
+        if not _config:
+            logger.error("No valid config file found (tried config.json and config.json.example)")
             _config = {"regions": {}}
     return _config
 
@@ -39,6 +46,13 @@ def _load_config() -> Dict[str, Any]:
 def get_config() -> Dict[str, Any]:
     """Get the regions configuration"""
     return _load_config()
+
+
+def get_appliance_sizes() -> List[str]:
+    """Get the list of valid appliance sizes from config"""
+    config = get_config()
+    preconfig = config.get("preconfig", {})
+    return preconfig.get("appliance_sizes", [])
 
 
 def get_build_servers_for_region(region: str) -> List[str]:
@@ -98,30 +112,4 @@ async def get_regions_config() -> Dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch configuration",
-        )
-
-
-@router.get(
-    "/config/preconfig",
-    summary="Get preconfig configuration",
-    description="Returns preconfig settings including appliance sizes",
-)
-async def get_preconfig_config() -> Dict[str, Any]:
-    """
-    Get preconfig configuration settings.
-    Returns appliance sizes and other preconfig-related settings.
-    This endpoint is public and does not require authentication.
-    """
-    try:
-        logger.info("Preconfig config requested")
-        config = get_config()
-        preconfig = config.get("preconfig", {})
-        return {
-            "appliance_sizes": preconfig.get("appliance_sizes", []),
-        }
-    except Exception as e:
-        logger.error(f"Error fetching preconfig config: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch preconfig configuration",
         )

@@ -33,7 +33,7 @@ export const usePushedPreconfigs = () => {
 
       // Try backend first, fall back to mock data in dev mode if unreachable
       const data = await fetchWithFallback<Preconfig[]>(
-        '/api/preconfigs/pushed',
+        '/api/preconfig/pushed',
         { credentials: 'include' },
         mockPushedPreconfigs
       );
