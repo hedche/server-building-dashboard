@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import User, PreconfigData, PushPreconfigRequest, PushPreconfigResponse
+from app.models import User, PreconfigData, PushPreconfigResponse
 from app.auth import get_current_user
 from app.config import settings
 from app.db.models import PreconfigDB
@@ -354,34 +354,42 @@ async def get_preconfigs_by_region(
 
 
 @router.post(
-    "/push-preconfig",
+    "/preconfig/{region}/push",
     response_model=PushPreconfigResponse,
-    summary="Push preconfig to depot",
-    description="Push preconfig to a specific depot (region)",
+    summary="Push preconfig to region",
+    description="Push preconfig to a specific region",
 )
 async def push_preconfig(
-    request: PushPreconfigRequest, current_user: User = Depends(get_current_user)
+    region: str, current_user: User = Depends(get_current_user)
 ) -> PushPreconfigResponse:
     """
-    Push preconfig to a specific depot
+    Push preconfig to a specific region
     Simulates pushing configuration to build system
     """
     try:
-        logger.info(
-            f"Push preconfig to depot {request.depot} requested by {current_user.email}"
-        )
-
-        # Check user has permission for this depot
-        if not check_depot_access(current_user.email, request.depot):
-            region_name = get_region_for_depot(request.depot) or "Unknown"
-            logger.warning(f"Depot access denied for {current_user.email} to depot {request.depot}")
+        # Validate region using config.json
+        valid_regions = _get_valid_regions()
+        region_lower = region.lower()
+        if region_lower not in valid_regions:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied: You do not have permission to push to depot {request.depot} ({region_name})"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid region: {region}. Must be one of: {', '.join(valid_regions)}"
             )
 
-        depot_to_region = _get_depot_to_region()
-        region = depot_to_region.get(request.depot, "Unknown")
+        # Check user has permission for this region
+        if not check_region_access(current_user.email, region_lower):
+            logger.warning(f"Region access denied for {current_user.email} to {region_lower}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied: You do not have permission to push to region {region}"
+            )
+
+        region_to_depot = _get_region_to_depot()
+        depot = region_to_depot.get(region_lower)
+
+        logger.info(
+            f"Push preconfig to region {region_lower} (depot {depot}) requested by {current_user.email}"
+        )
 
         # Simulate preconfig push operation
         # In production, this would:
@@ -391,12 +399,12 @@ async def push_preconfig(
         # 4. Potentially trigger webhooks/notifications
 
         logger.info(
-            f"Preconfig pushed to depot {request.depot} ({region}) successfully"
+            f"Preconfig pushed to region {region_lower.upper()} (depot {depot}) successfully"
         )
 
         return PushPreconfigResponse(
             status="success",
-            message=f"Preconfig pushed to depot {request.depot} ({region}) successfully",
+            message=f"Preconfig pushed to {region_lower.upper()} successfully",
         )
 
     except HTTPException:

@@ -11,7 +11,7 @@ type CurrentSortKey = 'dbid' | 'appliance_size' | 'created_at';
 type PushedSortKey = 'dbid' | 'depot' | 'appliance_size' | 'pushed_at';
 
 const PreconfigPage: React.FC = () => {
-  const { regions, getDepotForRegion, getRegionLabelForDepot, applianceSizes, isLoading: regionsLoading, error: regionsError } = useRegionsConfig();
+  const { regions, getRegionLabelForDepot, applianceSizes, isLoading: regionsLoading, error: regionsError } = useRegionsConfig();
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [selectedPreconfig, setSelectedPreconfig] = useState<Preconfig | null>(null);
 
@@ -166,9 +166,8 @@ const PreconfigPage: React.FC = () => {
   const currentRegion = regions.find(r => r.code === selectedRegion);
 
   const handlePushPreconfig = () => {
-    const depot = getDepotForRegion(selectedRegion);
-    if (depot !== undefined) {
-      pushPreconfig(depot);
+    if (selectedRegion) {
+      pushPreconfig(selectedRegion);
     }
   };
 

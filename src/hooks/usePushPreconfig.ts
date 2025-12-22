@@ -7,7 +7,7 @@ export const usePushPreconfig = () => {
   const [pushStatus, setPushStatus] = useState<PushStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  const pushPreconfig = async (depot: number): Promise<boolean> => {
+  const pushPreconfig = async (region: string): Promise<boolean> => {
     try {
       setError(null);
 
@@ -19,11 +19,10 @@ export const usePushPreconfig = () => {
 
       // Try backend first, fall back to mock in dev mode if unreachable
       const result = await fetchWithFallback<{ status: string; message: string }>(
-        '/api/push-preconfig',
+        `/api/preconfig/${region.toLowerCase()}/push`,
         {
           method: 'POST',
           credentials: 'include',
-          body: JSON.stringify({ depot }),
         },
         mockResponse
       );
@@ -35,12 +34,12 @@ export const usePushPreconfig = () => {
     }
   };
 
-  const handlePushPreconfig = async (depot: number) => {
+  const handlePushPreconfig = async (region: string) => {
     setPushStatus('pushing');
     setError(null);
 
     try {
-      const success = await pushPreconfig(depot);
+      const success = await pushPreconfig(region);
       setPushStatus(success ? 'success' : 'failed');
       
       if (!success) {

@@ -234,31 +234,26 @@ class TestPermissionEndpoints:
 class TestPushPreconfigPermissions:
     """Tests for push-preconfig permission checks"""
 
-    def test_admin_can_push_to_any_depot(self, client, authenticated_admin):
-        """Admin should be able to push to any depot"""
+    def test_admin_can_push_to_any_region(self, client, authenticated_admin):
+        """Admin should be able to push to any region"""
         valid_regions = get_valid_regions()
         for region in valid_regions:
-            depot = get_depot_for_region(region)
-            if depot:
-                response = client.post("/api/push-preconfig", json={"depot": depot})
-                assert response.status_code == 200, f"Failed for depot {depot} (region {region})"
+            response = client.post(f"/api/preconfig/{region}/push")
+            assert response.status_code == 200, f"Failed for region {region}"
 
-    def test_builder_can_push_to_own_depot(self, client, authenticated_first_region_builder):
-        """Builder should be able to push to their depot"""
+    def test_builder_can_push_to_own_region(self, client, authenticated_first_region_builder):
+        """Builder should be able to push to their region"""
         _, builder_region = get_builder_info_for_region(0)
-        depot = get_depot_for_region(builder_region)
-        response = client.post("/api/push-preconfig", json={"depot": depot})
+        response = client.post(f"/api/preconfig/{builder_region}/push")
         assert response.status_code == 200
 
-    def test_builder_cannot_push_to_other_depot(self, client, authenticated_first_region_builder):
-        """Builder should not be able to push to other depots"""
+    def test_builder_cannot_push_to_other_region(self, client, authenticated_first_region_builder):
+        """Builder should not be able to push to other regions"""
         _, builder_region = get_builder_info_for_region(0)
         valid_regions = get_valid_regions()
 
         for region in valid_regions:
             if region != builder_region:
-                depot = get_depot_for_region(region)
-                if depot:
-                    response = client.post("/api/push-preconfig", json={"depot": depot})
-                    assert response.status_code == 403, f"Expected 403 for depot {depot}"
-                    assert "do not have permission" in response.json()["detail"].lower()
+                response = client.post(f"/api/preconfig/{region}/push")
+                assert response.status_code == 403, f"Expected 403 for region {region}"
+                assert "do not have permission" in response.json()["detail"].lower()

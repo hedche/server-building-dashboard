@@ -64,59 +64,47 @@ class TestPushPreconfigEndpoint:
 
     def test_push_preconfig_requires_auth(self, client):
         """Test push preconfig endpoint requires authentication"""
-        response = client.post("/api/push-preconfig", json={"depot": 1})
+        response = client.post("/api/preconfig/cbg/push")
         assert response.status_code == 401
 
     def test_push_preconfig_success(self, client, authenticated_admin):
-        """Test admin can push preconfig to all depots"""
-        for depot in [1, 2, 4]:
-            response = client.post("/api/push-preconfig", json={"depot": depot})
+        """Test admin can push preconfig to all regions"""
+        for region in ["cbg", "dub", "dal"]:
+            response = client.post(f"/api/preconfig/{region}/push")
 
             assert response.status_code == 200
             data = response.json()
 
             assert data["status"] == "success"
             assert "successfully" in data["message"]
-            assert str(depot) in data["message"]
+            assert region.upper() in data["message"]
 
-    def test_push_preconfig_invalid_depot(self, client, authenticated_user):
-        """Test push preconfig rejects invalid depot"""
-        # Depot 3 is not valid (only 1, 2, 4 are valid)
-        response = client.post("/api/push-preconfig", json={"depot": 3})
-        assert response.status_code == 422
-
-        # Depot 0 is not valid
-        response = client.post("/api/push-preconfig", json={"depot": 0})
-        assert response.status_code == 422
-
-        # Depot 5 is not valid
-        response = client.post("/api/push-preconfig", json={"depot": 5})
-        assert response.status_code == 422
-
-    def test_push_preconfig_missing_depot(self, client, authenticated_user):
-        """Test push preconfig requires depot field"""
-        response = client.post("/api/push-preconfig", json={})
-        assert response.status_code == 422
-
-    def test_push_preconfig_invalid_depot_type(self, client, authenticated_user):
-        """Test push preconfig rejects non-integer depot"""
-        response = client.post("/api/push-preconfig", json={"depot": "invalid"})
-        assert response.status_code == 422
+    def test_push_preconfig_invalid_region(self, client, authenticated_admin):
+        """Test push preconfig rejects invalid region"""
+        response = client.post("/api/preconfig/invalid/push")
+        assert response.status_code == 400
+        assert "Invalid region" in response.json()["detail"]
 
     def test_push_preconfig_admin_access(self, client, authenticated_admin):
         """Test admin can push preconfig"""
-        response = client.post("/api/push-preconfig", json={"depot": 1})
+        response = client.post("/api/preconfig/cbg/push")
         assert response.status_code == 200
 
-    def test_push_preconfig_depot_region_mapping(self, client, authenticated_admin):
-        """Test depot numbers map to correct regions in response"""
-        depot_region_map = {1: "CBG", 2: "DUB", 4: "DAL"}
+    def test_push_preconfig_case_insensitive(self, client, authenticated_admin):
+        """Test region parameter is case insensitive"""
+        for region in ["CBG", "Cbg", "cbg"]:
+            response = client.post(f"/api/preconfig/{region}/push")
+            assert response.status_code == 200
 
-        for depot, region in depot_region_map.items():
-            response = client.post("/api/push-preconfig", json={"depot": depot})
+    def test_push_preconfig_region_in_response(self, client, authenticated_admin):
+        """Test region appears correctly in response message"""
+        region_map = {"cbg": "CBG", "dub": "DUB", "dal": "DAL"}
+
+        for region_input, region_expected in region_map.items():
+            response = client.post(f"/api/preconfig/{region_input}/push")
             assert response.status_code == 200
             data = response.json()
-            assert region in data["message"]
+            assert region_expected in data["message"]
 
 
 @pytest.mark.integration

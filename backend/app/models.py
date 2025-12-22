@@ -154,19 +154,6 @@ class PreconfigData(BaseModel):
         from_attributes = True
 
 
-class PushPreconfigRequest(BaseModel):
-    """Push preconfig request model"""
-
-    depot: int = Field(..., ge=1)
-
-    @validator("depot")
-    def validate_depot(cls, v):
-        valid_depots = _get_valid_depot_ids()
-        if v not in valid_depots:
-            raise ValueError(f"depot must be one of {valid_depots}")
-        return v
-
-
 class PushPreconfigResponse(BaseModel):
     """Push preconfig response model"""
 
