@@ -3,16 +3,16 @@ Preconfig management endpoints
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import logging
-from datetime import datetime
+from datetime import datetime, date, timezone
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, and_, func
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import User, PreconfigData, PushPreconfigResponse
+from app.models import User, PreconfigData, PushPreconfigResponse, BuildServerPushResult
 from app.auth import get_current_user
 from app.config import settings
 from app.db.models import PreconfigDB
@@ -22,7 +22,7 @@ from app.permissions import (
     get_region_for_depot,
     get_depot_for_region,
 )
-from app.routers.config import get_config, get_appliance_sizes
+from app.routers.config import get_config, get_appliance_sizes, get_build_server_config
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +144,8 @@ def generate_mock_pushed_preconfigs() -> List[PreconfigData]:
                     "network": "2x 25Gbps",
                 },
                 created_at=now,
-                pushed_at=now,
+                last_pushed_at=now,
+                pushed_to=["cbg-build-01"],
             )
         )
     if len(appliance_sizes) >= 2:
@@ -162,7 +163,8 @@ def generate_mock_pushed_preconfigs() -> List[PreconfigData]:
                     "network": "2x 100Gbps",
                 },
                 created_at=now,
-                pushed_at=now,
+                last_pushed_at=now,
+                pushed_to=["dub-build-01"],
             )
         )
 
@@ -337,7 +339,8 @@ async def get_preconfigs_by_region(
                 appliance_size=p.appliance_size,
                 config=p.config,
                 created_at=p.created_at,
-                pushed_at=p.pushed_at,
+                last_pushed_at=p.last_pushed_at,
+                pushed_to=p.pushed_to or [],
             )
             for p in db_preconfigs
         ]
@@ -356,15 +359,24 @@ async def get_preconfigs_by_region(
 @router.post(
     "/preconfig/{region}/push",
     response_model=PushPreconfigResponse,
-    summary="Push preconfig to region",
-    description="Push preconfig to a specific region",
+    summary="Push preconfigs to build servers",
+    description="Push today's preconfigs to all build servers in the specified region",
 )
 async def push_preconfig(
-    region: str, current_user: User = Depends(get_current_user)
+    region: str,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_optional_db),
 ) -> PushPreconfigResponse:
     """
-    Push preconfig to a specific region
-    Simulates pushing configuration to build system
+    Push preconfigs to build servers in the region.
+
+    1. Validates region and permissions
+    2. Gets build servers for region from config
+    3. Queries preconfigs created today for the region
+    4. For each build server, filters preconfigs by appliance_size matching server's preconfigs[]
+    5. Sends PUT request to each build server
+    6. Updates last_pushed_at and pushed_to for successful pushes
+    7. Returns per-server status
     """
     try:
         # Validate region using config.json
@@ -387,24 +399,190 @@ async def push_preconfig(
         region_to_depot = _get_region_to_depot()
         depot = region_to_depot.get(region_lower)
 
+        # Get build server configuration for this region
+        build_server_config = get_build_server_config(region_lower)
+        if not build_server_config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No build servers configured for region {region}"
+            )
+
         logger.info(
             f"Push preconfig to region {region_lower} (depot {depot}) requested by {current_user.email}"
         )
+        logger.info(f"Build servers: {list(build_server_config.keys())}")
 
-        # Simulate preconfig push operation
-        # In production, this would:
-        # 1. Validate preconfig exists
-        # 2. Push to build system
-        # 3. Update database status
-        # 4. Potentially trigger webhooks/notifications
+        # If no database, return mock success
+        if db is None:
+            mock_results = [
+                BuildServerPushResult(
+                    build_server=bs,
+                    status="success",
+                    preconfig_count=len(get_appliance_sizes())
+                )
+                for bs in build_server_config.keys()
+            ]
+            return PushPreconfigResponse(
+                status="success",
+                message=f"Mock push to {len(build_server_config)} build server(s)",
+                results=mock_results,
+                pushed_preconfigs=generate_mock_preconfigs(depot),
+            )
 
-        logger.info(
-            f"Preconfig pushed to region {region_lower.upper()} (depot {depot}) successfully"
+        # Query preconfigs for this depot created today (UTC)
+        today_utc = date.today()
+        stmt = select(PreconfigDB).where(
+            and_(
+                PreconfigDB.depot == depot,
+                func.date(PreconfigDB.created_at) == today_utc
+            )
         )
+        result = await db.execute(stmt)
+        preconfigs_to_push = result.scalars().all()
+
+        if not preconfigs_to_push:
+            # Return results for all build servers indicating no preconfigs
+            results = [
+                BuildServerPushResult(
+                    build_server=bs,
+                    status="skipped",
+                    error="No preconfigs to push today",
+                    preconfig_count=0
+                )
+                for bs in build_server_config.keys()
+            ]
+            return PushPreconfigResponse(
+                status="success",
+                message=f"No preconfigs to push for {region_lower.upper()} today",
+                results=results,
+                pushed_preconfigs=[],
+            )
+
+        # Push to each build server
+        push_results: List[BuildServerPushResult] = []
+        # Track which preconfigs were successfully pushed to which servers
+        preconfig_push_map: Dict[str, List[str]] = {p.dbid: [] for p in preconfigs_to_push}
+
+        async with httpx.AsyncClient(timeout=settings.BUILD_SERVER_TIMEOUT) as client:
+            for build_server, server_config in build_server_config.items():
+                # Get the appliance sizes this build server handles
+                server_preconfig_sizes = server_config.get("preconfigs", [])
+
+                # Filter preconfigs to only those matching this server's sizes
+                matching_preconfigs = [
+                    p for p in preconfigs_to_push
+                    if p.appliance_size in server_preconfig_sizes
+                ]
+
+                if not matching_preconfigs:
+                    push_results.append(BuildServerPushResult(
+                        build_server=build_server,
+                        status="skipped",
+                        error="No matching preconfigs for this server's sizes",
+                        preconfig_count=0
+                    ))
+                    continue
+
+                # Prepare payload
+                payload = [
+                    {
+                        "dbid": p.dbid,
+                        "depot": p.depot,
+                        "appliance_size": p.appliance_size,
+                        "config": p.config,
+                    }
+                    for p in matching_preconfigs
+                ]
+
+                url = f"https://{build_server}{settings.BUILD_SERVER_DOMAIN}/preconfig"
+                try:
+                    response = await client.put(url, json=payload)
+                    response.raise_for_status()
+                    push_results.append(BuildServerPushResult(
+                        build_server=build_server,
+                        status="success",
+                        preconfig_count=len(matching_preconfigs)
+                    ))
+                    # Track successful push for each preconfig
+                    for p in matching_preconfigs:
+                        preconfig_push_map[p.dbid].append(build_server)
+                    logger.info(f"Successfully pushed {len(matching_preconfigs)} preconfigs to {build_server}")
+                except httpx.TimeoutException:
+                    push_results.append(BuildServerPushResult(
+                        build_server=build_server,
+                        status="failed",
+                        error="Connection timeout",
+                        preconfig_count=0
+                    ))
+                    logger.error(f"Timeout pushing to {build_server}")
+                except httpx.HTTPStatusError as e:
+                    push_results.append(BuildServerPushResult(
+                        build_server=build_server,
+                        status="failed",
+                        error=f"HTTP {e.response.status_code}",
+                        preconfig_count=0
+                    ))
+                    logger.error(f"HTTP error pushing to {build_server}: {e}")
+                except Exception as e:
+                    push_results.append(BuildServerPushResult(
+                        build_server=build_server,
+                        status="failed",
+                        error=str(e)[:100],  # Truncate long errors
+                        preconfig_count=0
+                    ))
+                    logger.error(f"Error pushing to {build_server}: {e}")
+
+        # Update database for preconfigs that were successfully pushed
+        now = datetime.now(timezone.utc)
+        pushed_preconfigs_data: List[PreconfigData] = []
+
+        for preconfig in preconfigs_to_push:
+            successful_servers = preconfig_push_map.get(preconfig.dbid, [])
+            if successful_servers:
+                # Merge existing pushed_to with new successful servers
+                existing_pushed_to = preconfig.pushed_to or []
+                updated_pushed_to = list(set(existing_pushed_to + successful_servers))
+
+                preconfig.last_pushed_at = now
+                preconfig.pushed_to = updated_pushed_to
+
+                pushed_preconfigs_data.append(PreconfigData(
+                    dbid=preconfig.dbid,
+                    depot=preconfig.depot,
+                    appliance_size=preconfig.appliance_size,
+                    config=preconfig.config,
+                    created_at=preconfig.created_at,
+                    last_pushed_at=now,
+                    pushed_to=updated_pushed_to,
+                ))
+
+        if pushed_preconfigs_data:
+            await db.commit()
+
+        # Determine overall status
+        success_count = sum(1 for r in push_results if r.status == "success")
+        failed_count = sum(1 for r in push_results if r.status == "failed")
+        skipped_count = sum(1 for r in push_results if r.status == "skipped")
+        total_count = len(push_results)
+
+        if failed_count == 0 and success_count > 0:
+            overall_status = "success"
+            message = f"Successfully pushed preconfigs to {success_count} build server(s)"
+        elif success_count > 0:
+            overall_status = "partial"
+            message = f"Pushed to {success_count}/{total_count - skipped_count} build servers"
+        elif skipped_count == total_count:
+            overall_status = "success"
+            message = "No preconfigs matched any build server configurations"
+        else:
+            overall_status = "failed"
+            message = "Failed to push to any build servers"
 
         return PushPreconfigResponse(
-            status="success",
-            message=f"Preconfig pushed to {region_lower.upper()} successfully",
+            status=overall_status,
+            message=message,
+            results=push_results,
+            pushed_preconfigs=pushed_preconfigs_data,
         )
 
     except HTTPException:

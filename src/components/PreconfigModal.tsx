@@ -73,10 +73,10 @@ const PreconfigModal: React.FC<PreconfigModalProps> = ({ preconfig, isOpen, onCl
                 <span className="text-gray-400">Created:</span>
                 <div className="text-white font-mono text-sm">{formatDateTime(preconfig.created_at)}</div>
               </div>
-              {preconfig.pushed_at && (
+              {preconfig.last_pushed_at && (
                 <div className="col-span-2">
                   <span className="text-gray-400">Pushed:</span>
-                  <div className="text-white font-mono text-sm">{formatDateTime(preconfig.pushed_at)}</div>
+                  <div className="text-white font-mono text-sm">{formatDateTime(preconfig.last_pushed_at)}</div>
                 </div>
               )}
             </div>

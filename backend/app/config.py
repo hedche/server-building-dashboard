@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     PRECONFIG_API_ENDPOINT: Optional[str] = None
     PRECONFIG_API_PSK: Optional[str] = None
 
+    # Build Server Push Configuration
+    BUILD_SERVER_DOMAIN: str = ""  # Domain suffix for build servers (e.g., ".internal.example.com")
+    BUILD_SERVER_TIMEOUT: int = 30  # Timeout in seconds for build server requests
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

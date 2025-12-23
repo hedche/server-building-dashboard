@@ -9,7 +9,8 @@ const mockPushedPreconfigs: Preconfig[] = [
     appliance_size: 'small',
     config: { os: 'ubuntu-20.04', ram: '128GB', storage: '4x1TB NVMe' },
     created_at: '2025-01-14T15:30:00Z',
-    pushed_at: '2025-01-14T15:30:00Z'
+    last_pushed_at: '2025-01-14T15:30:00Z',
+    pushed_to: ['cbg-build-01']
   },
   {
     dbid: 'pushed-002',
@@ -17,7 +18,8 @@ const mockPushedPreconfigs: Preconfig[] = [
     appliance_size: 'medium',
     config: { os: 'ubuntu-22.04', ram: '512GB', storage: '12x4TB NVMe' },
     created_at: '2025-01-13T09:15:00Z',
-    pushed_at: '2025-01-13T09:15:00Z'
+    last_pushed_at: '2025-01-13T09:15:00Z',
+    pushed_to: ['dub-build-01']
   },
 ];
 

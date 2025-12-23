@@ -1,17 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Settings, RefreshCw, AlertCircle, CheckCircle, Upload, ChevronUp, ChevronDown, Search } from 'lucide-react';
+import { Settings, RefreshCw, AlertCircle, CheckCircle, Upload, ChevronUp, ChevronDown, Search, Check, X } from 'lucide-react';
 import { usePreconfigs, Preconfig } from '../hooks/usePreconfigs';
-import { usePushPreconfig } from '../hooks/usePushPreconfig';
+import { usePushPreconfig, BuildServerPushResult } from '../hooks/usePushPreconfig';
 import { usePushedPreconfigs } from '../hooks/usePushedPreconfigs';
 import { useRegionsConfig } from '../hooks/useRegionsConfig';
 import PreconfigModal from '../components/PreconfigModal';
 
 type SortDirection = 'asc' | 'desc';
 type CurrentSortKey = 'dbid' | 'appliance_size' | 'created_at';
-type PushedSortKey = 'dbid' | 'depot' | 'appliance_size' | 'pushed_at';
+type PushedSortKey = 'dbid' | 'appliance_size' | 'last_pushed_at';
 
 const PreconfigPage: React.FC = () => {
-  const { regions, getRegionLabelForDepot, applianceSizes, isLoading: regionsLoading, error: regionsError } = useRegionsConfig();
+  const { config, regions, getRegionLabelForDepot, applianceSizes, isLoading: regionsLoading, error: regionsError } = useRegionsConfig();
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [selectedPreconfig, setSelectedPreconfig] = useState<Preconfig | null>(null);
 
@@ -20,15 +20,24 @@ const PreconfigPage: React.FC = () => {
   const [currentSortDir, setCurrentSortDir] = useState<SortDirection>('desc');
 
   // Sorting state for Pushed Preconfigs table
-  const [pushedSortKey, setPushedSortKey] = useState<PushedSortKey>('pushed_at');
+  const [pushedSortKey, setPushedSortKey] = useState<PushedSortKey>('last_pushed_at');
   const [pushedSortDir, setPushedSortDir] = useState<SortDirection>('desc');
 
   // Search state for both tables
   const [currentSearch, setCurrentSearch] = useState('');
   const [pushedSearch, setPushedSearch] = useState('');
 
+  // State for showing push cards
+  const [showPushCards, setShowPushCards] = useState(false);
+
   const { preconfigs, isLoading, error, refetch } = usePreconfigs(selectedRegion);
-  const { pushStatus, error: pushError, pushPreconfig } = usePushPreconfig();
+  const {
+    status: pushStatus,
+    results: pushResults,
+    error: pushError,
+    pushPreconfig,
+    reset: resetPush
+  } = usePushPreconfig();
   const { pushedPreconfigs, isLoading: pushedLoading, error: pushedError, refetch: refetchPushed } = usePushedPreconfigs();
 
   // Set default region once regions are loaded
@@ -46,6 +55,18 @@ const PreconfigPage: React.FC = () => {
     });
     return counts;
   }, [preconfigs, applianceSizes]);
+
+  // Get build servers for selected region from config
+  const buildServersForRegion = useMemo(() => {
+    if (!config || !selectedRegion) return [];
+    const regionLower = selectedRegion.toLowerCase();
+    const regionConfig = config.regions[regionLower];
+    if (!regionConfig?.build_servers) return [];
+    return Object.entries(regionConfig.build_servers).map(([hostname, serverConfig]) => ({
+      hostname,
+      preconfigs: serverConfig.preconfigs || []
+    }));
+  }, [config, selectedRegion]);
 
   // Filter and sort current preconfigs
   const sortedPreconfigs = useMemo(() => {
@@ -95,10 +116,10 @@ const PreconfigPage: React.FC = () => {
     // Filter by search term
     const filtered = pushedPreconfigs.filter(p => {
       if (!searchLower) return true;
-      const regionLabel = getRegionLabelForDepot(p.depot) || '';
+      const pushedToStr = (p.pushed_to || []).join(' ');
       return (
         p.dbid.toLowerCase().includes(searchLower) ||
-        regionLabel.toLowerCase().includes(searchLower) ||
+        pushedToStr.toLowerCase().includes(searchLower) ||
         (p.appliance_size || '').toLowerCase().includes(searchLower) ||
         JSON.stringify(p.config).toLowerCase().includes(searchLower)
       );
@@ -114,17 +135,13 @@ const PreconfigPage: React.FC = () => {
           aVal = a.dbid;
           bVal = b.dbid;
           break;
-        case 'depot':
-          aVal = a.depot;
-          bVal = b.depot;
-          break;
         case 'appliance_size':
           aVal = a.appliance_size || '';
           bVal = b.appliance_size || '';
           break;
-        case 'pushed_at':
-          aVal = a.pushed_at || '';
-          bVal = b.pushed_at || '';
+        case 'last_pushed_at':
+          aVal = a.last_pushed_at || '';
+          bVal = b.last_pushed_at || '';
           break;
       }
 
@@ -133,7 +150,7 @@ const PreconfigPage: React.FC = () => {
       if (aVal > bVal) return pushedSortDir === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [pushedPreconfigs, pushedSortKey, pushedSortDir, pushedSearch, getRegionLabelForDepot]);
+  }, [pushedPreconfigs, pushedSortKey, pushedSortDir, pushedSearch]);
 
   // Handle sort for current preconfigs table
   const handleCurrentSort = (key: CurrentSortKey) => {
@@ -163,12 +180,24 @@ const PreconfigPage: React.FC = () => {
       : <ChevronDown size={14} className="text-green-400" />;
   };
 
-  const currentRegion = regions.find(r => r.code === selectedRegion);
-
-  const handlePushPreconfig = () => {
-    if (selectedRegion) {
-      pushPreconfig(selectedRegion);
+  const handlePushPreconfig = async () => {
+    if (selectedRegion && buildServersForRegion.length > 0) {
+      setShowPushCards(true);
+      const buildServerHostnames = buildServersForRegion.map(bs => bs.hostname);
+      await pushPreconfig(selectedRegion, buildServerHostnames);
+      // Refetch pushed preconfigs after push completes
+      refetchPushed();
     }
+  };
+
+  const handleResetPush = () => {
+    resetPush();
+    setShowPushCards(false);
+  };
+
+  // Get the result for a specific build server
+  const getResultForServer = (hostname: string): BuildServerPushResult | undefined => {
+    return pushResults.find(r => r.build_server === hostname);
   };
 
   return (
@@ -241,21 +270,83 @@ const PreconfigPage: React.FC = () => {
               ))}
             </div>
 
-            {/* Push Preconfig Button */}
-            {pushStatus === 'pushing' ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="flex items-center space-x-3">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-400"></div>
-                  <span className="text-gray-300 font-mono">
-                    Pushing Preconfigs to {currentRegion?.label}...
-                  </span>
+            {/* Push Preconfig Section */}
+            {showPushCards ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-white font-mono text-sm">
+                    {pushStatus === 'pushing' ? 'Pushing to' : 'Pushed to'} {buildServersForRegion.length} build server(s)
+                  </h3>
+                  {pushStatus === 'complete' && (
+                    <button
+                      onClick={handleResetPush}
+                      className="flex items-center space-x-2 px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors text-sm"
+                    >
+                      <RefreshCw size={14} />
+                      <span>Reset</span>
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {buildServersForRegion.map(bs => {
+                    const result = getResultForServer(bs.hostname);
+                    const isPushing = pushStatus === 'pushing' && !result;
+
+                    return (
+                      <div
+                        key={bs.hostname}
+                        className={`
+                          flex flex-col px-4 py-3 rounded-lg border transition-all duration-300 ease-in-out
+                          ${result?.status === 'success'
+                            ? 'bg-green-900/20 border-green-700'
+                            : result?.status === 'failed'
+                              ? 'bg-red-900/20 border-red-700'
+                              : result?.status === 'skipped'
+                                ? 'bg-yellow-900/20 border-yellow-700'
+                                : 'bg-gray-700 border-gray-600'}
+                        `}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-sm text-gray-300">{bs.hostname}</span>
+                          <div className="w-6 h-6 flex items-center justify-center">
+                            {isPushing ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400" />
+                            ) : result?.status === 'success' ? (
+                              <Check size={16} className="text-green-400" />
+                            ) : result?.status === 'failed' ? (
+                              <X size={16} className="text-red-400" />
+                            ) : result?.status === 'skipped' ? (
+                              <span className="text-yellow-400 text-xs">-</span>
+                            ) : null}
+                          </div>
+                        </div>
+                        {bs.preconfigs.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {bs.preconfigs.map(size => (
+                              <span key={size} className="bg-gray-600 px-2 py-0.5 rounded text-xs text-gray-300 capitalize">
+                                {size}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {result?.error && (
+                          <p className="text-xs text-red-400 mt-2">{result.error}</p>
+                        )}
+                        {result?.status === 'success' && result.preconfig_count > 0 && (
+                          <p className="text-xs text-green-400 mt-2">
+                            {result.preconfig_count} preconfig(s) pushed
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
               <div className="flex justify-center">
                 <button
                   onClick={handlePushPreconfig}
-                  disabled={pushStatus !== 'idle' || preconfigs.length === 0}
+                  disabled={preconfigs.length === 0 || buildServersForRegion.length === 0}
                   className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-mono"
                 >
                   <Upload size={18} />
@@ -402,14 +493,8 @@ const PreconfigPage: React.FC = () => {
                           <SortIndicator active={pushedSortKey === 'dbid'} direction={pushedSortDir} />
                         </div>
                       </th>
-                      <th
-                        className="px-4 py-3 text-left text-white font-mono text-sm cursor-pointer hover:bg-gray-600 transition-colors group"
-                        onClick={() => handlePushedSort('depot')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Region
-                          <SortIndicator active={pushedSortKey === 'depot'} direction={pushedSortDir} />
-                        </div>
+                      <th className="px-4 py-3 text-left text-white font-mono text-sm">
+                        Build Servers
                       </th>
                       <th
                         className="px-4 py-3 text-left text-white font-mono text-sm cursor-pointer hover:bg-gray-600 transition-colors group"
@@ -423,11 +508,11 @@ const PreconfigPage: React.FC = () => {
                       <th className="px-4 py-3 text-left text-white font-mono text-sm">Config</th>
                       <th
                         className="px-4 py-3 text-left text-white font-mono text-sm cursor-pointer hover:bg-gray-600 transition-colors group"
-                        onClick={() => handlePushedSort('pushed_at')}
+                        onClick={() => handlePushedSort('last_pushed_at')}
                       >
                         <div className="flex items-center gap-1">
                           Pushed
-                          <SortIndicator active={pushedSortKey === 'pushed_at'} direction={pushedSortDir} />
+                          <SortIndicator active={pushedSortKey === 'last_pushed_at'} direction={pushedSortDir} />
                         </div>
                       </th>
                     </tr>
@@ -441,7 +526,17 @@ const PreconfigPage: React.FC = () => {
                       >
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm">{preconfig.dbid}</td>
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm">
-                          {getRegionLabelForDepot(preconfig.depot)}
+                          <div className="flex flex-wrap gap-1">
+                            {(preconfig.pushed_to || []).length > 0 ? (
+                              preconfig.pushed_to!.map(bs => (
+                                <span key={bs} className="bg-gray-600 px-2 py-0.5 rounded text-xs">
+                                  {bs}
+                                </span>
+                              ))
+                            ) : (
+                              '-'
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm capitalize">
                           {preconfig.appliance_size || '-'}
@@ -452,7 +547,7 @@ const PreconfigPage: React.FC = () => {
                           </code>
                         </td>
                         <td className="px-4 py-3 text-gray-300 font-mono text-sm">
-                          {preconfig.pushed_at ? new Date(preconfig.pushed_at).toLocaleString() : '-'}
+                          {preconfig.last_pushed_at ? new Date(preconfig.last_pushed_at).toLocaleString() : '-'}
                         </td>
                       </tr>
                     ))}
@@ -468,7 +563,7 @@ const PreconfigPage: React.FC = () => {
         preconfig={selectedPreconfig}
         isOpen={!!selectedPreconfig}
         onClose={() => setSelectedPreconfig(null)}
-        regionLabel={selectedPreconfig?.pushed_at ? getRegionLabelForDepot(selectedPreconfig.depot) : undefined}
+        regionLabel={selectedPreconfig?.last_pushed_at ? getRegionLabelForDepot(selectedPreconfig.depot) : undefined}
       />
       </div>
   );

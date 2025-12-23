@@ -71,7 +71,10 @@ class PreconfigDB(Base):
         onupdate=func.now(),
         nullable=False
     )
-    pushed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_pushed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Push tracking - list of build server hostnames this preconfig was pushed to
+    pushed_to: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
 
     # Audit
     created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # User email

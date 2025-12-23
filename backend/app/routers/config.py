@@ -72,6 +72,22 @@ def get_build_servers_for_region(region: str) -> List[str]:
     return list(build_servers.keys())
 
 
+def get_build_server_config(region: str) -> Dict[str, Dict[str, Any]]:
+    """
+    Get full build server configuration for a region including preconfigs.
+
+    Args:
+        region: Region code (cbg, dub, dal)
+
+    Returns:
+        Dict mapping hostname to config: {hostname: {location, build_racks, preconfigs}}
+    """
+    config = get_config()
+    regions = config.get("regions", {})
+    region_config = regions.get(region, {})
+    return region_config.get("build_servers", {})
+
+
 def get_region_for_build_server(build_server: str) -> Optional[str]:
     """
     Find which region a build server belongs to.

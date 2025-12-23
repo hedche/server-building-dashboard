@@ -7,7 +7,8 @@ export interface Preconfig {
   appliance_size: string | null;
   config: Record<string, any>;
   created_at: string;
-  pushed_at?: string | null;
+  last_pushed_at?: string | null;
+  pushed_to?: string[];
 }
 
 // Mock data for dev mode - organized by region

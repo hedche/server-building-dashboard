@@ -3,7 +3,7 @@ Pydantic models for request/response validation
 """
 
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Literal
 from datetime import datetime
 from enum import Enum
 
@@ -141,7 +141,8 @@ class PreconfigData(BaseModel):
     appliance_size: Optional[str] = Field(None, description="Appliance size (small, medium, large)")
     config: Dict[str, Any]
     created_at: datetime
-    pushed_at: Optional[datetime] = None
+    last_pushed_at: Optional[datetime] = None
+    pushed_to: List[str] = Field(default_factory=list, description="Build server hostnames pushed to")
 
     @validator("depot")
     def validate_depot(cls, v):
@@ -154,11 +155,35 @@ class PreconfigData(BaseModel):
         from_attributes = True
 
 
-class PushPreconfigResponse(BaseModel):
-    """Push preconfig response model"""
+class BuildServerPushResult(BaseModel):
+    """Result of push to a single build server"""
 
-    status: str
-    message: str
+    build_server: str = Field(..., description="Build server hostname")
+    status: Literal["success", "failed", "skipped"] = Field(..., description="Push status")
+    error: Optional[str] = Field(None, description="Error message if failed")
+    preconfig_count: int = Field(0, description="Number of preconfigs pushed to this server")
+
+
+class PushPreconfigResponse(BaseModel):
+    """Push preconfig response model with per-server status"""
+
+    status: Literal["success", "partial", "failed"] = Field(..., description="Overall push status")
+    message: str = Field(..., description="Human-readable status message")
+    results: List[BuildServerPushResult] = Field(default_factory=list, description="Per-server push results")
+    pushed_preconfigs: List[PreconfigData] = Field(default_factory=list, description="Preconfigs that were pushed")
+
+
+class PushPreconfigRequest(BaseModel):
+    """Push preconfig request model (deprecated - region now taken from URL path)"""
+
+    depot: int = Field(..., ge=1, description="Depot ID to push to")
+
+    @validator("depot")
+    def validate_depot(cls, v):
+        valid_depots = _get_valid_depot_ids()
+        if v not in valid_depots:
+            raise ValueError(f"depot must be one of {valid_depots}")
+        return v
 
 
 # Assignment Models

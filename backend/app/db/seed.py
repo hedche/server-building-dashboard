@@ -63,7 +63,7 @@ async def seed_preconfigs():
 
         preconfigs = [
             PreconfigDB(
-                id="pre-cbg-001",
+                dbid="pre-cbg-001",
                 depot=1,
                 appliance_size="medium",
                 config={
@@ -74,10 +74,22 @@ async def seed_preconfigs():
                     "raid": "RAID 10",
                     "network": "2x 25Gbps",
                 },
-                created_by="admin@example.com",
             ),
             PreconfigDB(
-                id="pre-dub-001",
+                dbid="pre-cbg-002",
+                depot=1,
+                appliance_size="small",
+                config={
+                    "os": "Ubuntu 22.04 LTS",
+                    "cpu": "1x Intel Xeon Gold 6248R",
+                    "ram": "64GB DDR4",
+                    "storage": "2x 1TB NVMe SSD",
+                    "raid": "RAID 1",
+                    "network": "2x 10Gbps",
+                },
+            ),
+            PreconfigDB(
+                dbid="pre-dub-001",
                 depot=2,
                 appliance_size="large",
                 config={
@@ -88,10 +100,22 @@ async def seed_preconfigs():
                     "raid": "RAID 10",
                     "network": "2x 100Gbps",
                 },
-                created_by="admin@example.com",
             ),
             PreconfigDB(
-                id="pre-dal-001",
+                dbid="pre-dub-002",
+                depot=2,
+                appliance_size="medium",
+                config={
+                    "os": "Rocky Linux 9",
+                    "cpu": "2x Intel Xeon Gold 6326",
+                    "ram": "256GB DDR4",
+                    "storage": "8x 2TB NVMe SSD",
+                    "raid": "RAID 10",
+                    "network": "2x 25Gbps",
+                },
+            ),
+            PreconfigDB(
+                dbid="pre-dal-001",
                 depot=4,
                 appliance_size="xlarge",
                 config={
@@ -102,8 +126,21 @@ async def seed_preconfigs():
                     "raid": "RAID 60",
                     "network": "4x 100Gbps",
                 },
-                created_by="admin@example.com",
-                pushed_at=datetime.utcnow(),
+                last_pushed_at=datetime.utcnow(),
+                pushed_to=["dal-build-01"],
+            ),
+            PreconfigDB(
+                dbid="pre-dal-002",
+                depot=4,
+                appliance_size="small",
+                config={
+                    "os": "Ubuntu 22.04 LTS",
+                    "cpu": "1x AMD EPYC 7313",
+                    "ram": "64GB DDR4",
+                    "storage": "2x 1TB NVMe SSD",
+                    "raid": "RAID 1",
+                    "network": "2x 10Gbps",
+                },
             ),
         ]
 
