@@ -9,6 +9,7 @@ from typing import Dict, Any
 from main import app
 from app.auth import saml_auth, _sessions
 from app.routers.config import get_config
+from app.correlation import correlation_id_var
 
 
 def get_valid_regions() -> list:
@@ -187,6 +188,16 @@ def clear_sessions():
     _sessions.clear()
     yield
     _sessions.clear()
+
+
+@pytest.fixture(autouse=True)
+def reset_correlation_id():
+    """
+    Reset correlation ID context before and after each test
+    """
+    correlation_id_var.set(None)
+    yield
+    correlation_id_var.set(None)
 
 
 @pytest.fixture

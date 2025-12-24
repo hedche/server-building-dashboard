@@ -23,6 +23,7 @@ from app.logger import (
     log_auth_event,
     log_error,
 )
+from app.correlation import set_correlation_id, generate_correlation_id
 
 
 @asynccontextmanager
@@ -68,7 +69,12 @@ app = FastAPI(
 # Request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all requests with timing"""
+    """Log all requests with timing and correlation ID"""
+    # Get or generate correlation ID
+    # Use X-Request-ID header if provided, otherwise generate UUID
+    correlation_id = request.headers.get("X-Request-ID") or generate_correlation_id()
+    set_correlation_id(correlation_id)
+
     start_time = time.time()
 
     # Get client IP
@@ -79,10 +85,13 @@ async def log_requests(request: Request, call_next):
     # Process request
     response = await call_next(request)
 
+    # Add correlation ID to response headers for client tracing
+    response.headers["X-Request-ID"] = correlation_id
+
     # Calculate duration
     duration_ms = (time.time() - start_time) * 1000
 
-    # Log the request
+    # Log the request (correlation ID is automatically included via filter)
     log_request(
         endpoint=request.url.path,
         method=request.method,

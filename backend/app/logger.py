@@ -8,6 +8,18 @@ import sys
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from .config import settings
+from .correlation import get_correlation_id
+
+
+class CorrelationIdFilter(logging.Filter):
+    """
+    Logging filter that adds correlation_id to log records.
+    If no correlation ID is set in the context, uses '-' as placeholder.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.correlation_id = get_correlation_id() or "-"
+        return True
 
 
 class LoggerSetup:
@@ -45,9 +57,9 @@ class LoggerSetup:
         )
         handler.setLevel(level or self.log_level)
 
-        # Detailed formatter with timestamp, level, module, and message
+        # Detailed formatter with timestamp, level, correlation ID, module, and message
         formatter = logging.Formatter(
-            "%(asctime)s | %(levelname)-8s | %(name)-25s | %(funcName)-20s | %(message)s",
+            "%(asctime)s | %(levelname)-8s | %(correlation_id)-36s | %(name)-25s | %(funcName)-20s | %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
         handler.setFormatter(formatter)
@@ -58,9 +70,9 @@ class LoggerSetup:
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(level or self.log_level)
 
-        # Simpler formatter for console
+        # Simpler formatter for console (includes correlation ID)
         formatter = logging.Formatter(
-            "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+            "%(asctime)s | %(levelname)-8s | %(correlation_id)s | %(name)s | %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
         handler.setFormatter(formatter)
@@ -87,12 +99,19 @@ class LoggerSetup:
         # Remove existing handlers to avoid duplicates
         logger.handlers = []
 
-        # Add console handler
-        logger.addHandler(self._create_console_handler())
+        # Create correlation ID filter (shared by all handlers)
+        correlation_filter = CorrelationIdFilter()
 
-        # Add file handler
+        # Add console handler with correlation filter
+        console_handler = self._create_console_handler()
+        console_handler.addFilter(correlation_filter)
+        logger.addHandler(console_handler)
+
+        # Add file handler with correlation filter
         if log_file:
-            logger.addHandler(self._create_file_handler(log_file))
+            file_handler = self._create_file_handler(log_file)
+            file_handler.addFilter(correlation_filter)
+            logger.addHandler(file_handler)
 
         self._loggers[name] = logger
         return logger
