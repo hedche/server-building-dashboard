@@ -465,7 +465,47 @@ See `backend/CLAUDE.md` for detailed backend deployment instructions.
 
 - **Root README.md**: General project info, API contracts, environment setup
 - **backend/CLAUDE.md**: Detailed backend implementation guide (auth, middleware, testing, SAML config)
+- **docs/**: Comprehensive wiki documentation (see below)
 - **This file (CLAUDE.md)**: Monorepo structure, integration points, common tasks
+
+## Documentation Maintenance
+
+### Wiki Documentation
+
+The `docs/` directory contains comprehensive documentation for the project wiki, suitable for GitLab, GitHub, and Cadmus.
+
+**When modifying the application, update relevant documentation in `docs/` if changes affect:**
+
+| Change Type | Update These Docs |
+|-------------|-------------------|
+| API endpoints | `docs/api/` |
+| Frontend features/pages | `docs/features/`, `docs/architecture/frontend.md` |
+| Backend logic/routers | `docs/architecture/backend.md` |
+| Configuration options | `docs/getting-started/configuration.md` |
+| Deployment process | `docs/deployment/` |
+| Security features | `docs/security/` |
+| Authentication/permissions | `docs/security/authentication.md`, `docs/security/permissions.md` |
+
+**Documentation structure:**
+```
+docs/
+├── README.md                 # Main index
+├── getting-started/          # Installation and configuration
+├── architecture/             # System design and components
+├── api/                      # API reference with examples
+├── features/                 # Feature guides
+├── deployment/               # Deployment guides
+├── security/                 # Security documentation
+├── development/              # Developer guides
+└── troubleshooting/          # Common issues and debugging
+```
+
+**Guidelines:**
+- Keep documentation in sync with code changes
+- Use the existing markdown format and style
+- Include code examples where helpful
+- Update Mermaid diagrams if architecture changes
+- Add/update API request/response examples when endpoints change
 
 ## Project-Specific Conventions
 
