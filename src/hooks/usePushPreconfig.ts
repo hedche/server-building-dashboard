@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
-import { fetchWithFallback } from '../utils/api';
 import { Preconfig } from './usePreconfigs';
+import { RegionLockInfo, LockConflictDetail } from '../types/lock';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
 
 export interface BuildServerPushResult {
   build_server: string;
@@ -16,7 +19,7 @@ export interface PushPreconfigResponse {
   pushed_preconfigs: Preconfig[];
 }
 
-export type PushStatus = 'idle' | 'pushing' | 'complete';
+export type PushStatus = 'idle' | 'pushing' | 'complete' | 'locked';
 
 export interface PushState {
   status: PushStatus;
@@ -24,6 +27,7 @@ export interface PushState {
   pushedPreconfigs: Preconfig[];
   error: string | null;
   overallStatus: 'success' | 'partial' | 'failed' | null;
+  lockInfo: RegionLockInfo | null;
 }
 
 // Generate mock results for dev mode fallback
@@ -80,6 +84,7 @@ export const usePushPreconfig = () => {
     pushedPreconfigs: [],
     error: null,
     overallStatus: null,
+    lockInfo: null,
   });
 
   const pushPreconfig = useCallback(async (region: string, buildServers: string[]) => {
@@ -89,35 +94,118 @@ export const usePushPreconfig = () => {
       pushedPreconfigs: [],
       error: null,
       overallStatus: null,
+      lockInfo: null,
     });
 
     try {
-      const mockResponse = generateMockResults(buildServers);
+      // In dev mode with backend unreachable, use mock
+      if (DEV_MODE) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-      const response = await fetchWithFallback<PushPreconfigResponse>(
-        `/api/preconfig/${region.toLowerCase()}/push`,
-        {
-          method: 'POST',
-          credentials: 'include',
+          const response = await fetch(`${BACKEND_URL}/api/preconfig/${region.toLowerCase()}/push`, {
+            method: 'POST',
+            credentials: 'include',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          clearTimeout(timeoutId);
+
+          // Handle 409 Conflict (region locked)
+          if (response.status === 409) {
+            const conflictData: LockConflictDetail = await response.json();
+            setState({
+              status: 'locked',
+              results: [],
+              pushedPreconfigs: [],
+              error: conflictData.message,
+              overallStatus: 'failed',
+              lockInfo: conflictData.lock_info,
+            });
+            return null;
+          }
+
+          if (response.ok) {
+            const data: PushPreconfigResponse = await response.json();
+            setState({
+              status: 'complete',
+              results: data.results,
+              pushedPreconfigs: data.pushed_preconfigs,
+              error: data.status === 'failed' ? data.message : null,
+              overallStatus: data.status,
+              lockInfo: null,
+            });
+            return data;
+          } else {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+        } catch (err) {
+          // Backend unreachable in dev mode, use mock
+          if (err instanceof Error && err.name === 'AbortError') {
+            console.warn('Backend timeout, using mock data');
+          }
+          const mockResponse = generateMockResults(buildServers);
+          setState({
+            status: 'complete',
+            results: mockResponse.results,
+            pushedPreconfigs: mockResponse.pushed_preconfigs,
+            error: mockResponse.status === 'failed' ? mockResponse.message : null,
+            overallStatus: mockResponse.status,
+            lockInfo: null,
+          });
+          return mockResponse;
+        }
+      }
+
+      // Production mode - no mock fallback
+      const response = await fetch(`${BACKEND_URL}/api/preconfig/${region.toLowerCase()}/push`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        mockResponse
-      );
-
-      setState({
-        status: 'complete',
-        results: response.results,
-        pushedPreconfigs: response.pushed_preconfigs,
-        error: response.status === 'failed' ? response.message : null,
-        overallStatus: response.status,
       });
 
-      return response;
+      // Handle 409 Conflict (region locked)
+      if (response.status === 409) {
+        const conflictData: LockConflictDetail = await response.json();
+        setState({
+          status: 'locked',
+          results: [],
+          pushedPreconfigs: [],
+          error: conflictData.message,
+          overallStatus: 'failed',
+          lockInfo: conflictData.lock_info,
+        });
+        return null;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: PushPreconfigResponse = await response.json();
+      setState({
+        status: 'complete',
+        results: data.results,
+        pushedPreconfigs: data.pushed_preconfigs,
+        error: data.status === 'failed' ? data.message : null,
+        overallStatus: data.status,
+        lockInfo: null,
+      });
+
+      return data;
     } catch (err) {
       setState(prev => ({
         ...prev,
         status: 'complete',
         error: err instanceof Error ? err.message : 'Failed to push preconfig',
         overallStatus: 'failed',
+        lockInfo: null,
       }));
       return null;
     }
@@ -130,6 +218,7 @@ export const usePushPreconfig = () => {
       pushedPreconfigs: [],
       error: null,
       overallStatus: null,
+      lockInfo: null,
     });
   }, []);
 

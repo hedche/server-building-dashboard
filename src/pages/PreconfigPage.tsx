@@ -4,7 +4,9 @@ import { usePreconfigs, Preconfig } from '../hooks/usePreconfigs';
 import { usePushPreconfig, BuildServerPushResult } from '../hooks/usePushPreconfig';
 import { usePushedPreconfigs } from '../hooks/usePushedPreconfigs';
 import { useRegionsConfig } from '../hooks/useRegionsConfig';
+import { useRegionLocks } from '../hooks/useRegionLocks';
 import PreconfigModal from '../components/PreconfigModal';
+import RegionLockBanner from '../components/RegionLockBanner';
 
 type SortDirection = 'asc' | 'desc';
 type CurrentSortKey = 'dbid' | 'appliance_size' | 'created_at';
@@ -35,10 +37,24 @@ const PreconfigPage: React.FC = () => {
     status: pushStatus,
     results: pushResults,
     error: pushError,
+    lockInfo: pushLockInfo,
     pushPreconfig,
     reset: resetPush
   } = usePushPreconfig();
   const { pushedPreconfigs, isLoading: pushedLoading, error: pushedError, refetch: refetchPushed } = usePushedPreconfigs();
+
+  // Region locks - polls every 5 seconds when enabled
+  const {
+    getLockForRegion,
+    refetch: refetchLocks,
+    isLoading: locksLoading,
+  } = useRegionLocks({ enabled: !!selectedRegion && !showPushCards });
+
+  // Get lock status for currently selected region
+  const currentRegionLock = useMemo(() => {
+    if (!selectedRegion) return null;
+    return getLockForRegion(selectedRegion);
+  }, [selectedRegion, getLockForRegion]);
 
   // Set default region once regions are loaded
   useEffect(() => {
@@ -271,7 +287,18 @@ const PreconfigPage: React.FC = () => {
             </div>
 
             {/* Push Preconfig Section */}
-            {showPushCards ? (
+            {showPushCards && pushStatus === 'locked' && pushLockInfo ? (
+              <div className="space-y-4">
+                <RegionLockBanner
+                  lockInfo={pushLockInfo}
+                  onRefresh={() => {
+                    refetchLocks();
+                    handleResetPush();
+                  }}
+                  isRefreshing={locksLoading}
+                />
+              </div>
+            ) : showPushCards ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-white font-mono text-sm">
@@ -342,6 +369,12 @@ const PreconfigPage: React.FC = () => {
                   })}
                 </div>
               </div>
+            ) : currentRegionLock ? (
+              <RegionLockBanner
+                lockInfo={currentRegionLock}
+                onRefresh={refetchLocks}
+                isRefreshing={locksLoading}
+              />
             ) : (
               <div className="flex justify-center">
                 <button

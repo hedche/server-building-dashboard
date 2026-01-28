@@ -34,64 +34,74 @@ gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
 
 ### Testing
 
-#### Local Testing (with venv)
+**IMPORTANT: Always use Docker for running tests.** The Docker container has all required dependencies (Python 3.11, libxmlsec1 for SAML, etc.) and ensures consistent test results. Do not attempt to run tests locally with venv.
+
+#### Docker Testing (required)
+
+All commands must be run from the `backend/` directory.
+
 ```bash
-# Install test dependencies
-pip install -r requirements.txt
+# Build the Docker test image (one-time setup, or after Dockerfile changes)
+docker build -t server-dashboard-backend-test:latest .
 
 # Run all tests
-pytest
-
-# Run with verbose output and coverage
-pytest -v --cov=app --cov=main --cov-report=term-missing
-
-# Run specific test categories
-pytest -m unit          # Unit tests only
-pytest -m integration   # Integration tests only
-pytest -m auth          # Authentication tests
-pytest -m middleware    # Middleware tests
-
-# Run a specific test file
-pytest tests/test_models.py
-
-# Run a specific test
-pytest tests/test_models.py::TestUser::test_user_creation_valid
-```
-
-#### Docker Testing (recommended)
-```bash
-# Build the Docker image first (if not already built)
-docker build -t server-dashboard-backend-test .
-
-# Run all tests in Docker container (mounts tests, .env, and saml_metadata)
 docker run --rm \
   -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/app:/app/app:ro" \
+  -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
+  -v "$(pwd)/.env.example:/app/.env:ro" \
+  server-dashboard-backend-test:latest \
+  pytest -v
+
+# Run all tests with coverage report
+docker run --rm \
+  -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/app:/app/app:ro" \
   -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
   -v "$(pwd)/.env.example:/app/.env:ro" \
   server-dashboard-backend-test:latest \
   pytest -v --cov=app --cov=main --cov-report=term-missing
 
-# Run specific test file in Docker
+# Run specific test file
 docker run --rm \
   -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/app:/app/app:ro" \
   -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
   -v "$(pwd)/.env.example:/app/.env:ro" \
   server-dashboard-backend-test:latest \
-  pytest tests/test_api_buildlogs.py -v
+  pytest tests/test_lock_service.py -v
 
-# Run specific test in Docker
+# Run specific test by name
 docker run --rm \
   -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/app:/app/app:ro" \
   -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
   -v "$(pwd)/.env.example:/app/.env:ro" \
   server-dashboard-backend-test:latest \
-  pytest tests/test_api_buildlogs.py::test_custom_hostname_pattern -v
+  pytest tests/test_lock_service.py::TestAcquireLock::test_acquire_lock_no_existing_lock -v
+
+# Run tests by marker
+docker run --rm \
+  -v "$(pwd)/tests:/app/tests:ro" \
+  -v "$(pwd)/app:/app/app:ro" \
+  -v "$(pwd)/saml_metadata:/app/saml_metadata:ro" \
+  -v "$(pwd)/.env.example:/app/.env:ro" \
+  server-dashboard-backend-test:latest \
+  pytest -m unit -v
 ```
 
-**Note**: Docker testing requires:
-- Tests directory mounted (contains test files)
-- SAML metadata mounted (required for app initialization)
-- .env file mounted (.env.example works for tests)
+**Volume mounts explained:**
+- `tests:/app/tests:ro` - Test files (read-only)
+- `app:/app/app:ro` - Application code (read-only, allows testing local changes)
+- `saml_metadata:/app/saml_metadata:ro` - SAML IDP metadata (required for app init)
+- `.env.example:/app/.env:ro` - Environment variables (.env.example works for tests)
+
+**Why Docker is required:**
+- Ensures Python 3.11 environment
+- Includes system dependencies (libxmlsec1 for SAML)
+- Matches production container environment
+- No need to manage local Python virtual environments
+- Consistent results across macOS, Linux, and Windows
 
 ### Code Quality
 ```bash
@@ -256,6 +266,173 @@ curl http://localhost:8000/api/build-logs/your-test-hostname
 2. Update `app/auth.py:store_session()` and `get_session()` to use Redis
 3. Update `app/middleware.py:RateLimitMiddleware` to use Redis
 4. Add `REDIS_URL` to config.py and .env
+
+## Logging and Debugging
+
+### Log Files
+
+The backend creates separate log files for different components in the `LOG_DIR` directory (default: `/var/log/server-building-dashboard`):
+
+| Log File | Purpose | Key Information |
+|----------|---------|-----------------|
+| `app.log` | General application logs | Startup, configuration, general events |
+| `api.log` | API request/response logs | All HTTP requests, response codes, timing |
+| `auth.log` | Authentication events | SAML logins, session management |
+| `security.log` | Security events | Rate limiting, unauthorized access |
+| `error.log` | Error tracking | All errors and exceptions |
+| **`preconfig.log`** | **Preconfig operations** | **Detailed preconfig push debugging** |
+
+**Note**: If the application doesn't have write permission to `LOG_DIR`, it will fall back to `./logs` in the current directory.
+
+### Debug Logging for Preconfig Push
+
+The preconfig push logic includes comprehensive debug-level logging to a dedicated log file (`preconfig.log`). This makes it easy to troubleshoot preconfig pushing issues.
+
+#### Enabling Debug Logging
+
+Set `LOG_LEVEL=DEBUG` in your `.env` file:
+
+```bash
+# In backend/.env
+LOG_LEVEL=DEBUG
+```
+
+Then restart the backend:
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### What Gets Logged at DEBUG Level
+
+When DEBUG logging is enabled, the `preconfig.log` file will contain detailed information about every preconfig push operation:
+
+**1. Request Information**
+```
+Region: cbg -> Depot: 1
+User: user@example.com (Role: operator)
+Build servers configured: 2
+  - cbg-build-01: handles appliance sizes ['small', 'medium']
+  - cbg-build-02: handles appliance sizes ['large', 'xlarge']
+```
+
+**2. Lock Acquisition**
+```
+[LOCK] Acquire lock request: region=cbg, user=user@example.com, timeout=300s
+[LOCK] Checking for existing lock on region cbg...
+[LOCK] No existing lock found - creating new lock...
+[LOCK] ✓ Lock creation successful, expires at 2026-01-28 15:45:00
+```
+
+**3. Database Queries**
+```
+Querying database for preconfigs: depot=1, date=2026-01-28
+Found 15 preconfigs to push for depot 1 today
+```
+
+**4. Preconfig Details**
+```
+PRECONFIGS TO PUSH:
+  DBID: dbid-001-123        | Depot: 1 | Size: small      | Created: 2026-01-28 10:30:00
+  DBID: dbid-001-124        | Depot: 1 | Size: medium     | Created: 2026-01-28 10:31:00
+  DBID: dbid-001-125        | Depot: 1 | Size: large      | Created: 2026-01-28 10:32:00
+
+PRECONFIGS BY APPLIANCE SIZE:
+  small: 5 preconfig(s)
+  medium: 7 preconfig(s)
+  large: 3 preconfig(s)
+```
+
+**5. Push Operations** (per build server)
+```
+Processing build server: cbg-build-01
+  Server handles appliance sizes: ['small', 'medium']
+  Matched 12 preconfigs for this server
+  Preconfigs to push to cbg-build-01:
+    - DBID: dbid-001-123 | Size: small
+    - DBID: dbid-001-124 | Size: medium
+  PUT https://cbg-build-01.internal.example.com/preconfig
+  Payload size: 12 preconfig(s)
+  Timeout: 30s
+  ✓ SUCCESS: cbg-build-01 - Status: 200
+    Tracked: DBID dbid-001-123 pushed to cbg-build-01
+    Tracked: DBID dbid-001-124 pushed to cbg-build-01
+```
+
+**6. Database Updates**
+```
+UPDATING DATABASE WITH PUSH RESULTS
+DBID dbid-001-123:
+  Previously pushed to: ['cbg-build-03']
+  New successful pushes: ['cbg-build-01']
+  Updated pushed_to list: ['cbg-build-03', 'cbg-build-01']
+  Last pushed at: 2026-01-28 15:30:45.123456+00:00
+```
+
+**7. Summary**
+```
+PUSH OPERATION SUMMARY
+Total build servers: 2
+  ✓ Successful: 2
+  ✗ Failed: 0
+  ⊘ Skipped: 0
+Total preconfigs processed: 15
+Total preconfigs pushed successfully: 15
+Overall status: success
+Response message: Successfully pushed preconfigs to 2 build server(s)
+```
+
+**8. Lock Release**
+```
+[LOCK] Releasing lock for region cbg...
+[LOCK] ✓ Lock deleted successfully
+```
+
+#### Reading Preconfig Logs
+
+**Tail the log in real-time:**
+```bash
+tail -f /var/log/server-building-dashboard/preconfig.log
+```
+
+**Search for specific DBIDs:**
+```bash
+grep "dbid-001-123" /var/log/server-building-dashboard/preconfig.log
+```
+
+**See only push summaries:**
+```bash
+grep "PUSH OPERATION SUMMARY" -A 10 /var/log/server-building-dashboard/preconfig.log
+```
+
+**Find failed pushes:**
+```bash
+grep "✗" /var/log/server-building-dashboard/preconfig.log
+```
+
+**View logs for a specific correlation ID** (from X-Request-ID header):
+```bash
+grep "abc123def456" /var/log/server-building-dashboard/preconfig.log
+```
+
+#### Production Logging
+
+In production, set `LOG_LEVEL=INFO` to reduce log volume. INFO level still includes:
+- Successful/failed push operations
+- Lock acquisition/release events
+- Database query results
+- Error messages
+
+DEBUG level is verbose and should only be used for troubleshooting.
+
+### Correlation IDs
+
+Every request is assigned a correlation ID (UUID) that appears in all log entries. This makes it easy to trace a specific user's action through all log files:
+
+```
+2026-01-28 15:30:45 | INFO     | abc123def456                         | app.preconfig           | push_preconfig       | Push preconfig to region cbg (depot 1) requested by user@example.com
+```
+
+The correlation ID is also returned in the `X-Request-ID` response header, allowing frontend debugging.
 
 ## API Endpoints
 

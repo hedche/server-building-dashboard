@@ -216,3 +216,32 @@ class ErrorResponse(BaseModel):
     error: str
     code: int
     detail: Optional[str] = None
+
+
+# Lock Models
+class RegionLockInfo(BaseModel):
+    """Information about a region's push lock status"""
+
+    region: str = Field(..., description="Region code (e.g., 'cbg', 'dub', 'dal')")
+    is_locked: bool = Field(..., description="Whether the region is currently locked")
+    locked_by_email: Optional[str] = Field(None, description="Email of user holding the lock")
+    locked_by_name: Optional[str] = Field(None, description="Name of user holding the lock")
+    locked_at: Optional[datetime] = Field(None, description="When the lock was acquired")
+    expires_at: Optional[datetime] = Field(None, description="When the lock will expire")
+
+
+class RegionLockResponse(BaseModel):
+    """Response containing lock info for all regions"""
+
+    locks: Dict[str, RegionLockInfo] = Field(
+        default_factory=dict,
+        description="Map of region code to lock info"
+    )
+
+
+class LockConflictDetail(BaseModel):
+    """Detail payload for 409 Conflict responses"""
+
+    error: str = Field(default="region_locked", description="Error code")
+    message: str = Field(..., description="Human-readable error message")
+    lock_info: RegionLockInfo = Field(..., description="Information about the existing lock")

@@ -132,4 +132,4 @@ class TestPushedPreconfigsEndpoint:
             assert "dbid" in preconfig
             assert "depot" in preconfig
             assert "config" in preconfig
-            assert "pushed_at" in preconfig
+            assert "last_pushed_at" in preconfig

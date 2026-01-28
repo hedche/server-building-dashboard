@@ -205,3 +205,26 @@ class PushCredsDB(Base):
 
     def __repr__(self):
         return f"<PushCredsDB(hostname={self.hostname}, status={self.status}, processed={self.creds_processed_count}, pushed={self.creds_pushed_count})>"
+
+
+# Region Push Lock Model
+class RegionPushLockDB(Base):
+    """
+    Tracks active locks on region preconfig pushes to prevent concurrent operations.
+    Uses unique constraint on region to ensure only one lock per region at a time.
+    """
+    __tablename__ = "region_push_locks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    region: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
+    locked_by_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    locked_by_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    locked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    def __repr__(self):
+        return f"<RegionPushLockDB(region={self.region}, locked_by={self.locked_by_email}, expires_at={self.expires_at})>"
