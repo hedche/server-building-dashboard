@@ -281,6 +281,7 @@ The backend creates separate log files for different components in the `LOG_DIR`
 | `security.log` | Security events | Rate limiting, unauthorized access |
 | `error.log` | Error tracking | All errors and exceptions |
 | **`preconfig.log`** | **Preconfig operations** | **Detailed preconfig push debugging** |
+| **`build-logs.log`** | **Build log operations** | **Hostname validation, file discovery, read operations** |
 
 **Note**: If the application doesn't have write permission to `LOG_DIR`, it will fall back to `./logs` in the current directory.
 
@@ -423,6 +424,93 @@ In production, set `LOG_LEVEL=INFO` to reduce log volume. INFO level still inclu
 - Error messages
 
 DEBUG level is verbose and should only be used for troubleshooting.
+
+### Debug Logging for Build Logs
+
+The build logs endpoint includes comprehensive debug-level logging to help troubleshoot issues with log file discovery and access.
+
+#### What Gets Logged at DEBUG Level
+
+When DEBUG logging is enabled, the `build-logs.log` file will contain detailed information:
+
+**1. Request Information**
+```
+BUILD LOG REQUEST - Hostname: cbg-srv-001
+User: user@example.com (Role: operator)
+BUILD_LOGS_DIR: /var/log/build-servers
+HOSTNAME_PATTERN: ^[a-zA-Z0-9._-]+$
+```
+
+**2. Hostname Validation**
+```
+[BUILDLOG] Validating hostname: 'cbg-srv-001'
+[BUILDLOG] Hostname length: 11 characters
+[BUILDLOG] ✓ Length check passed (11 chars)
+[BUILDLOG] Using pattern: ^[a-zA-Z0-9._-]+$
+[BUILDLOG] ✓ Hostname format valid
+```
+
+**3. File Discovery**
+```
+[BUILDLOG] Starting file discovery...
+[BUILDLOG] Searching in: /var/log/build-servers
+[BUILDLOG] Found 3 build server(s): ['build-server-01', 'build-server-02', 'build-server-03']
+[BUILDLOG] Searching for log file...
+[BUILDLOG] Checking build server: build-server-01
+[BUILDLOG]   Candidate path: /var/log/build-servers/build-server-01/cbg-srv-001/cbg-srv-001-Installer.log
+[BUILDLOG]   Resolved path: /var/log/build-servers/build-server-01/cbg-srv-001/cbg-srv-001-Installer.log
+[BUILDLOG]   ✓ Path is within BUILD_LOGS_DIR
+[BUILDLOG] ✓ Log file found in build server: build-server-01
+```
+
+**4. File Operations**
+```
+[BUILDLOG] File size: 245,890 bytes (0.23 MB)
+[BUILDLOG] Size limit: 10,485,760 bytes (10 MB)
+[BUILDLOG] ✓ File size within limits
+[BUILDLOG] Reading file with UTF-8 encoding...
+[BUILDLOG] ✓ File read successful
+[BUILDLOG] Content length: 245,890 characters
+[BUILDLOG] Content preview (first 100 chars): 2026-01-28 10:30:00 - Starting installation...\n2026-01-28 10:30:01 - Checking dependencies...
+```
+
+**5. Response Summary**
+```
+BUILD LOG RESPONSE SUMMARY
+Status: 200 OK
+Build Server: build-server-01
+File Path: /var/log/build-servers/build-server-01/cbg-srv-001/cbg-srv-001-Installer.log
+File Size: 245,890 bytes
+Content Type: text/plain; charset=utf-8
+X-Build-Server Header: build-server-01
+```
+
+#### Reading Build Logs
+
+**Tail the log in real-time:**
+```bash
+tail -f /var/log/server-building-dashboard/build-logs.log
+```
+
+**Search for specific hostname:**
+```bash
+grep "cbg-srv-001" /var/log/server-building-dashboard/build-logs.log
+```
+
+**Find failed validations:**
+```bash
+grep "✗" /var/log/server-building-dashboard/build-logs.log
+```
+
+**See only successful log retrievals:**
+```bash
+grep "BUILD LOG RESPONSE SUMMARY" -A 7 /var/log/server-building-dashboard/build-logs.log
+```
+
+**View logs for a specific correlation ID:**
+```bash
+grep "abc123def456" /var/log/server-building-dashboard/build-logs.log
+```
 
 ### Correlation IDs
 

@@ -46,6 +46,80 @@ async def lifespan(app: FastAPI):
     else:
         app_logger.warning("DATABASE_URL not configured - running without database")
 
+    # Verify BUILD_LOGS_DIR access and log initial structure
+    if settings.BUILD_LOGS_DIR:
+        from pathlib import Path
+        from app.logger import buildlogs_logger
+
+        build_logs_path = Path(settings.BUILD_LOGS_DIR)
+
+        if not build_logs_path.exists():
+            buildlogs_logger.warning(
+                f"BUILD_LOGS_DIR does not exist: {settings.BUILD_LOGS_DIR}"
+            )
+        elif not build_logs_path.is_dir():
+            buildlogs_logger.error(
+                f"BUILD_LOGS_DIR is not a directory: {settings.BUILD_LOGS_DIR}"
+            )
+        else:
+            try:
+                # Check read access
+                entries = list(build_logs_path.iterdir())
+
+                buildlogs_logger.info(
+                    f"BUILD_LOGS_DIR access verified: {settings.BUILD_LOGS_DIR}"
+                )
+                buildlogs_logger.info(
+                    f"Found {len(entries)} build server(s) in BUILD_LOGS_DIR"
+                )
+
+                # Log first 3 build servers and their structure
+                for i, entry in enumerate(sorted(entries)[:3]):
+                    if entry.is_dir():
+                        try:
+                            sub_entries = list(entry.iterdir())
+                            buildlogs_logger.info(
+                                f"  Build server {i+1}: {entry.name} "
+                                f"({len(sub_entries)} hostname directories)"
+                            )
+
+                            # Log first hostname directory as example
+                            if sub_entries:
+                                first_hostname = sorted(sub_entries)[0]
+                                if first_hostname.is_dir():
+                                    log_files = list(first_hostname.glob("*.log"))
+                                    if log_files:
+                                        buildlogs_logger.info(
+                                            f"    Example: {first_hostname.name}/ "
+                                            f"contains {len(log_files)} log file(s)"
+                                        )
+                        except PermissionError:
+                            buildlogs_logger.warning(
+                                f"  Build server {i+1}: {entry.name} "
+                                f"(permission denied)"
+                            )
+                    else:
+                        buildlogs_logger.debug(
+                            f"  Skipping non-directory: {entry.name}"
+                        )
+
+                if len(entries) > 3:
+                    buildlogs_logger.info(
+                        f"  ... and {len(entries) - 3} more build server(s)"
+                    )
+
+            except PermissionError as e:
+                buildlogs_logger.error(
+                    f"Permission denied reading BUILD_LOGS_DIR: {settings.BUILD_LOGS_DIR}"
+                )
+            except Exception as e:
+                buildlogs_logger.error(
+                    f"Error accessing BUILD_LOGS_DIR: {str(e)}"
+                )
+    else:
+        from app.logger import buildlogs_logger
+        buildlogs_logger.warning("BUILD_LOGS_DIR not configured")
+
     yield
 
     # Cleanup on shutdown

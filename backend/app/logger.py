@@ -127,6 +127,7 @@ api_logger = logger_setup.get_logger("app.api", "api.log")
 error_logger = logger_setup.get_logger("app.error", "error.log")
 security_logger = logger_setup.get_logger("app.security", "security.log")
 preconfig_logger = logger_setup.get_logger("app.preconfig", "preconfig.log")
+buildlogs_logger = logger_setup.get_logger("app.buildlogs", "build-logs.log")
 
 
 def log_request(
